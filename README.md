@@ -1,4 +1,12 @@
-# picoquic
+# Fair Queuing Aware Congestion Control
+
+This repo contains the code for *Fair Queuing Aware Congestion Control*, an upcoming research work. 
+
+It is a congestion control algorithm that always uses two subflows with the same source and destination IP address. It alternatingly sends more data on one of the two subflows and then checks whether the subflow that sent more could achieve more throughput. If this is the case, then there's no Fair Queuing, otherwise, if both subflows achieve the same throughput, even though one sends more, it means that there's Fair Queuing. 
+
+The idea is that one uses regular congestion control when no fair queuing is detected. If there's fair queuing, one is free to use any congestion control algorithm as it cannot interact badly with other flows as fairness is always guaranteed. 
+
+# picoquic -- Original Readme
 
 Minimalist implementation of the QUIC protocol, as defined by the IETF.
 The IETF spec started with the version of QUIC defined by Google and
