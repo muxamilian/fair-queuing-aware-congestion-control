@@ -1235,17 +1235,20 @@ uint8_t * picoquic_format_one_blocked_frame(picoquic_cnx_t* cnx, uint8_t* bytes,
             stream->stream_id > ((IS_BIDIR_STREAM_ID(stream->stream_id)) ? cnx->max_stream_id_bidir_remote : cnx->max_stream_id_unidir_remote)) {
             if (!(IS_BIDIR_STREAM_ID(stream->stream_id) ? cnx->stream_blocked_bidir_sent : cnx->stream_blocked_unidir_sent))
             {
+                puts("Making stream blocked frame");
                 /* Prepare a stream blocked frame */
                 bytes = picoquic_format_stream_blocked_frame(cnx, bytes, bytes_max, more_data, is_pure_ack, stream);
             }
         }
         else {
             if (cnx->maxdata_remote <= cnx->data_sent && !cnx->sent_blocked_frame) {
+                puts("Making data blocked frame");
                 /* Prepare a blocked frame */
                 bytes = picoquic_format_data_blocked_frame(cnx, bytes, bytes_max, more_data, is_pure_ack);
             }
 
             if (stream->sent_offset >= stream->maxdata_remote && !stream->stream_data_blocked_sent) {
+                puts("Making stream blocked frame2");
                 /* Prepare a stream data blocked frame */
                 bytes = picoquic_format_stream_data_blocked_frame(bytes, bytes_max, more_data, is_pure_ack, stream);
             }
@@ -2269,6 +2272,12 @@ uint64_t picoquic_compute_ack_delay_max(picoquic_cnx_t* cnx, uint64_t rtt, uint6
 void picoquic_compute_ack_gap_and_delay(picoquic_cnx_t* cnx, uint64_t rtt, uint64_t remote_min_ack_delay,
     uint64_t data_rate, uint64_t* ack_gap, uint64_t* ack_delay_max)
 {
+    if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+        *ack_gap = 2;
+        *ack_delay_max = 5000ull;
+    }
+    return;
+    
     uint64_t return_data_rate = 0;
     uint64_t nb_packets = picoquic_compute_packets_in_window(cnx, data_rate);
 

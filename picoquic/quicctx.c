@@ -4053,6 +4053,9 @@ picoquic_congestion_algorithm_t const* picoquic_get_congestion_algorithm(char co
         if (strcmp(alg_name, "reno") == 0) {
             alg = picoquic_newreno_algorithm;
         }
+        else if (strcmp(alg_name, "tonopah") == 0) {
+            alg = picoquic_tonopah_algorithm;
+        }
         else if (strcmp(alg_name, "cubic") == 0) {
             alg = picoquic_cubic_algorithm;
         }

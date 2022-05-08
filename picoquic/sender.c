@@ -900,6 +900,10 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t * path_x, 
     else {
         double pacing_rate = ((double)path_x->cwin / (double)rtt_nanosec) * 1000000000.0;
         uint64_t quantum = path_x->cwin / 4;
+        
+        if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+            quantum = (cnx->path[0]->cwin + cnx->path[1]->cwin) / 2 / 4;
+        }
 
         if (quantum < 2ull * path_x->send_mtu) {
             quantum = 2ull * path_x->send_mtu;
@@ -907,7 +911,7 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t * path_x, 
         else {
             if (slow_start && path_x->smoothed_rtt > 4*PICOQUIC_MAX_BANDWIDTH_TIME_INTERVAL_MAX) {
                 const uint64_t quantum_min = 0x8000;
-                if (quantum  < quantum_min){
+                if (quantum < quantum_min){
                     quantum = quantum_min;
                 }
                 else {
@@ -919,6 +923,10 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t * path_x, 
             }
             else if (quantum > 16ull * path_x->send_mtu) {
                 quantum = 16ull * path_x->send_mtu;
+            } 
+            if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2 && 
+                quantum > 2ull * path_x->send_mtu) {
+                quantum = 2ull * path_x->send_mtu;
             }
 
         }
@@ -2639,7 +2647,12 @@ int picoquic_prepare_packet_client_init(picoquic_cnx_t* cnx, picoquic_path_t * p
                 bytes_next = bytes + length;
                 bytes_max = bytes + send_buffer_max - checksum_overhead;
 
-                if ((tls_ready == 0 || path_x->cwin <= path_x->bytes_in_transit)
+                int cwin_limited = path_x->cwin <= path_x->bytes_in_transit;
+                if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                    cwin_limited = (cnx->path[0]->cwin + cnx->path[1]->cwin) <= (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit);
+                }
+
+                if ((tls_ready == 0 || cwin_limited)
                     && (cnx->cnx_state == picoquic_state_client_almost_ready
                         || picoquic_is_ack_needed(cnx, current_time, next_wake_time, pc, 0) == 0)
                     && cnx->first_misc_frame == NULL && !force_handshake_padding) {
@@ -2666,7 +2679,12 @@ int picoquic_prepare_packet_client_init(picoquic_cnx_t* cnx, picoquic_path_t * p
                     }
                     length = bytes_next - bytes;
 
-                    if (ret == 0 && path_x->cwin > path_x->bytes_in_transit) {
+                    int not_cwin_limited = path_x->cwin > path_x->bytes_in_transit;
+                    if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                        not_cwin_limited = (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit) < (cnx->path[0]->cwin + cnx->path[1]->cwin);
+                    }
+
+                    if (ret == 0 && not_cwin_limited) {
                         /* Encode the crypto handshake frame */
                         if (tls_ready != 0) {
                             /* Encode the crypto frame */
@@ -2852,7 +2870,12 @@ int picoquic_prepare_packet_server_init(picoquic_cnx_t* cnx, picoquic_path_t * p
         packet->pc = pc;
         bytes_next = bytes + length;
 
-        if ((tls_ready != 0 && path_x->cwin > path_x->bytes_in_transit) 
+        int not_cwin_limited = path_x->cwin > path_x->bytes_in_transit;
+        if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+            not_cwin_limited = (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit) < (cnx->path[0]->cwin + cnx->path[1]->cwin);
+        }
+
+        if ((tls_ready != 0 && not_cwin_limited) 
             || cnx->ack_ctx[pc].act[0].ack_needed) {
             bytes_next = picoquic_format_ack_frame(cnx, bytes_next, bytes_max, &more_data, current_time, pc, 0);
             /* Encode the crypto frame */
@@ -3498,7 +3521,13 @@ int picoquic_prepare_packet_almost_ready(picoquic_cnx_t* cnx, picoquic_path_t* p
                 }
 
                 length = bytes_next - bytes;
-                if (path_x->cwin < path_x->bytes_in_transit) {
+
+                int cwin_limited = path_x->cwin < path_x->bytes_in_transit;
+                if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                    cwin_limited = (cnx->path[0]->cwin + cnx->path[1]->cwin) < (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit);
+                }
+
+                if (cwin_limited) {
                     cnx->cwin_blocked = 1;
                     if (cnx->congestion_alg != NULL) {
                         cnx->congestion_alg->alg_notify(cnx, path_x,
@@ -3861,8 +3890,10 @@ int picoquic_prepare_packet_ready(picoquic_cnx_t* cnx, picoquic_path_t* path_x, 
         } else if (cnx->cnx_state != picoquic_state_disconnected && path_x->challenge_verified != 0) {
             /* There are no frames yet that would be exempt from pacing control, but if there
              * was they should be sent here. */
-
-            if (picoquic_is_sending_authorized_by_pacing(cnx, path_x, current_time, next_wake_time)) {
+            
+            int is_authorized = picoquic_is_sending_authorized_by_pacing(cnx, path_x, current_time, next_wake_time);
+            if ((cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) || 
+            is_authorized) {
                 /* Send here the frames that are not exempt from the pacing control,
                  * but are exempt for congestion control */
                 if (picoquic_is_ack_needed(cnx, current_time, next_wake_time, pc, !is_nominal_ack_path)) {
@@ -3912,7 +3943,14 @@ int picoquic_prepare_packet_ready(picoquic_cnx_t* cnx, picoquic_path_t* path_x, 
                 /* Compute the length before entering the CC block */
                 length = bytes_next - bytes;
 
-                if (path_x->cwin < path_x->bytes_in_transit) {
+            }
+            if (is_authorized) {
+                int cwin_limited = path_x->cwin < path_x->bytes_in_transit;
+                if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                    cwin_limited = (cnx->path[0]->cwin + cnx->path[1]->cwin) < (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit);
+                }
+
+                if (cwin_limited) {
                     cnx->cwin_blocked = 1;
                     if (cnx->congestion_alg != NULL) {
                         cnx->congestion_alg->alg_notify(cnx, path_x,
@@ -4029,8 +4067,13 @@ int picoquic_prepare_packet_ready(picoquic_cnx_t* cnx, picoquic_path_t* path_x, 
                         }
                     } /* end of PMTU not required */
 
+                    int not_cwin_limited = path_x->cwin > path_x->bytes_in_transit;
+                    if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                        not_cwin_limited = (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit) < (cnx->path[0]->cwin + cnx->path[1]->cwin);
+                    }
+
                     if (ret == 0 && length <= header_length && send_buffer_max > path_x->send_mtu
-                        && path_x->cwin > path_x->bytes_in_transit&& pmtu_discovery_needed != picoquic_pmtu_discovery_not_needed) {
+                        && not_cwin_limited && pmtu_discovery_needed != picoquic_pmtu_discovery_not_needed) {
                         /* Since there is no data to send, this is an opportunity to send an MTU probe */
                         length = picoquic_prepare_mtu_probe(cnx, path_x, header_length, checksum_overhead, bytes, send_buffer_max);
                         packet->length = length;
@@ -4311,12 +4354,16 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     int is_min_rtt_pacing_ok = 0;
     int is_ack_needed = 0;
 
+    int next_path = rand() % 2;
+
     cnx->last_path_polled++;
     if (cnx->last_path_polled > cnx->nb_paths) {
         cnx->last_path_polled = 0;
     }
 
-    for (i = 0; i < cnx->nb_paths; i++) {
+    // for (i = 0; i < cnx->nb_paths; i++) {
+    // for (i = cnx->nb_paths-1; i >= 0; i--) {
+    for (i = (next_path==0 ? 0 : cnx->nb_paths-1); next_path==0 ? i < cnx->nb_paths : i >= 0; next_path==0 ? i++ : i--) {
         cnx->path[i]->is_nominal_ack_path = 0;
         if (cnx->path[i]->path_is_demoted) {
             continue;
@@ -4390,6 +4437,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
                         is_min_rtt_pacing_ok = 0;
                     }
                     cnx->path[i]->polled++;
+
                     if (picoquic_is_sending_authorized_by_pacing(cnx, cnx->path[i], current_time, &pacing_time_next)) {
                         if (cnx->path[i]->last_sent_time < last_sent_pacing) {
                             last_sent_pacing = cnx->path[i]->last_sent_time;
@@ -4398,7 +4446,13 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
                                 is_min_rtt_pacing_ok = 1;
                             }
                         }
-                        if (cnx->path[i]->bytes_in_transit < cnx->path[i]->cwin) {
+
+                        int not_cwin_limited = cnx->path[i]->bytes_in_transit < cnx->path[i]->cwin;
+                        if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                            not_cwin_limited = (cnx->path[0]->bytes_in_transit + cnx->path[1]->bytes_in_transit) < (cnx->path[0]->cwin + cnx->path[1]->cwin);
+                        }
+
+                        if (not_cwin_limited) {
                             if (cnx->path[i]->last_sent_time < last_sent_cwin) {
                                 last_sent_cwin = cnx->path[i]->last_sent_time;
                                 data_path_cwin = i;
@@ -4420,33 +4474,51 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     for (i += 1; i < cnx->nb_paths; i++) {
         cnx->path[i]->is_nominal_ack_path = 0;
     }
-    if (i_min_rtt >= 0) {
+
+    if (i_min_rtt >= 0 || (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2)) {
         is_ack_needed = picoquic_is_ack_needed(cnx, current_time, next_wake_time, 0, 0);
-        cnx->path[i_min_rtt]->is_nominal_ack_path = 1;
+        if (!(cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2)) {
+            cnx->path[i_min_rtt]->is_nominal_ack_path = 1;
+        } else {
+            cnx->path[next_path]->is_nominal_ack_path = 1;
+        }
     }
 
+    int continue_to_search_for_regular_path = 1;
     if (challenge_path >= 0) {
         path_id = challenge_path;
+        continue_to_search_for_regular_path = 0;
     }
-    else if (is_ack_needed && is_min_rtt_pacing_ok) {
-        path_id = i_min_rtt;
-    }
-    else if (data_path_cwin >= 0) {
-        path_id = data_path_cwin;
-    }
-    else if (data_path_pacing >= 0) {
-        path_id = data_path_pacing;
-    }
-    else {
-        uint64_t path_wake_time = pacing_time_next;
-        if (challenge_time_next < path_wake_time) {
-            path_wake_time = challenge_time_next;
+    else if (is_ack_needed && (is_min_rtt_pacing_ok || (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2))) {
+        if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+            path_id = next_path;
+            continue_to_search_for_regular_path = 1;
+        } else {
+            continue_to_search_for_regular_path = 0;
+            path_id = i_min_rtt;
         }
-        if (path_wake_time < *next_wake_time) {
-            *next_wake_time = path_wake_time;
-            SET_LAST_WAKE(cnx->quic, PICOQUIC_SENDER);
+    }
+    if (continue_to_search_for_regular_path) {
+        if (data_path_cwin >= 0) {
+            path_id = data_path_cwin;
         }
-        path_id = 0;
+        else if (data_path_pacing >= 0) {
+            path_id = data_path_pacing;
+        }
+        else {
+            uint64_t path_wake_time = pacing_time_next;
+            if (challenge_time_next < path_wake_time) {
+                path_wake_time = challenge_time_next;
+            }
+            if (path_wake_time < *next_wake_time) {
+                *next_wake_time = path_wake_time;
+                SET_LAST_WAKE(cnx->quic, PICOQUIC_SENDER);
+            }
+            path_id = 0;
+            if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+                path_id = next_path;
+            }
+        }
     }
 
     cnx->path[path_id]->selected++;
@@ -4698,6 +4770,8 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
                 if (*send_length > 0) {
                     if (packet_size == 0 && *send_length < 8*(*send_msg_size)) {
                         if (cnx->path[path_id]->cwin <= cnx->path[path_id]->bytes_in_transit) {
+                            puts("Didn't expect to end up here");
+                            abort();
                             cnx->nb_trains_blocked_cwin++;
                         }
                         else if (cnx->path[path_id]->pacing_bucket_nanosec < cnx->path[path_id]->pacing_packet_time_nanosec){

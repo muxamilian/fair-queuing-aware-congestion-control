@@ -47,6 +47,7 @@
 #include <autoqlog.h>
 #include <picoquic_packet_loop.h>
 #include "picoquic_sample.h"
+#include <picoquic_internal.h>
 
  /* Client context and callback management:
   *
@@ -236,33 +237,74 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                      * When formatting the file_path, verify that the directory name is zero-length,
                      * or terminated by a proper file separator.
                      */
-                    char file_path[1024];
-                    size_t dir_len = strlen(client_ctx->default_dir);
-                    size_t file_name_len = strlen(client_ctx->file_names[stream_ctx->file_rank]);
 
-                    if (dir_len > 0 && dir_len < sizeof(file_path)) {
-                        memcpy(file_path, client_ctx->default_dir, dir_len);
-                        if (file_path[dir_len - 1] != PICOQUIC_FILE_SEPARATOR[0]) {
-                            file_path[dir_len] = PICOQUIC_FILE_SEPARATOR[0];
-                            dir_len++;
-                        }
+                    if (!(cnx->is_simple_multipath_enabled)) {
+                        puts("client: no multipath enabled!");
                     }
 
-                    if (dir_len + file_name_len + 1 >= sizeof(file_path)) {
-                        /* Unexpected: could not format the file name */
-                        fprintf(stderr, "Could not format the file path.\n");
-                        ret = -1;
-                    } else {
-                        memcpy(file_path + dir_len, client_ctx->file_names[stream_ctx->file_rank],
-                            file_name_len);
-                        file_path[dir_len + file_name_len] = 0;
-                        stream_ctx->F = picoquic_file_open(file_path, "wb");
+                    struct sockaddr_in* local_ref = (struct sockaddr_in*) &(cnx->path[0]->local_addr);
+                    struct sockaddr_in* peer_ref = (struct sockaddr_in*) &(cnx->path[0]->peer_addr);
 
-                        if (stream_ctx->F == NULL) {
-                            /* Could not open the file */
-                            fprintf(stderr, "Could not open the file: %s\n", file_path);
-                            ret = -1;
-                        }
+                    struct sockaddr_in* local = malloc(sizeof(struct sockaddr_storage));
+                    memcpy(local, local_ref, sizeof(*local_ref));
+
+                    struct sockaddr_in* peer = malloc(sizeof(struct sockaddr_storage));
+                    memcpy(peer, peer_ref, sizeof(*peer_ref));
+
+                    struct sockaddr_in* peer_copy = malloc(sizeof(struct sockaddr_storage));
+                    memcpy(peer_copy, peer_ref, sizeof(*peer_ref));
+                    peer_copy->sin_port = htons(ntohs(peer->sin_port) + 1);
+
+                    uint16_t local_port = local->sin_port;
+                    uint16_t peer_port = peer->sin_port;
+                    uint16_t peer_port2 = peer_copy->sin_port;
+                    printf("local_port: %hu, peer_port2: %hu, peer_port: %hu\n", local_port, peer_port2, peer_port);
+
+                    uint64_t simulated_time = picoquic_current_time();
+
+                    int new_path_ret = picoquic_probe_new_path(cnx, (struct sockaddr*) peer_copy,
+                        (struct sockaddr*) local, simulated_time);
+                    if (new_path_ret != 0) {
+                        printf("Client: Creating a second path failed.\n");
+                    }
+
+                    // char file_path[1024];
+                    // size_t dir_len = strlen(client_ctx->default_dir);
+                    // size_t file_name_len = strlen(client_ctx->file_names[stream_ctx->file_rank]);
+
+                    // if (dir_len > 0 && dir_len < sizeof(file_path)) {
+                    //     memcpy(file_path, client_ctx->default_dir, dir_len);
+                    //     if (file_path[dir_len - 1] != PICOQUIC_FILE_SEPARATOR[0]) {
+                    //         file_path[dir_len] = PICOQUIC_FILE_SEPARATOR[0];
+                    //         dir_len++;
+                    //     }
+                    // }
+
+                    // if (dir_len + file_name_len + 1 >= sizeof(file_path)) {
+                    //     /* Unexpected: could not format the file name */
+                    //     fprintf(stderr, "Could not format the file path.\n");
+                    //     ret = -1;
+                    // } else {
+                    //     memcpy(file_path + dir_len, client_ctx->file_names[stream_ctx->file_rank],
+                    //         file_name_len);
+                    //     file_path[dir_len + file_name_len] = 0;
+                    //     stream_ctx->F = picoquic_file_open(file_path, "wb");
+
+                    //     if (stream_ctx->F == NULL) {
+                    //         /* Could not open the file */
+                    //         fprintf(stderr, "Could not open the file: %s\n", file_path);
+                    //         ret = -1;
+                    //     }
+                    // }
+                    // FIXME: Commented out writing to not use the SSD too much...
+                    
+                    char file_path[] = "/dev/null";
+                    stream_ctx->F = picoquic_file_open(file_path, "wb");
+
+                    if (stream_ctx->F == NULL) {
+                        /* Could not open the file */
+                        fprintf(stderr, "Could not open the file: %s\n", file_path);
+                        ret = -1;
                     }
                 }
 
@@ -493,11 +535,24 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
                 fprintf(stderr, "No token file present. Will create one as <%s>.\n", token_store_filename);
             }
 
-            picoquic_set_default_congestion_algorithm(quic, picoquic_bbr_algorithm);
+            picoquic_tp_t parameters;
+            memset(&parameters, 0, sizeof(picoquic_tp_t));
+            picoquic_init_transport_parameters(&parameters, 1);
+            parameters.enable_multipath = 1;
+            parameters.enable_time_stamp = 3;
+            parameters.initial_max_stream_data_bidi_local = 0x800000;
+            parameters.initial_max_stream_data_bidi_remote = 1000000;
+            parameters.initial_max_stream_data_uni = 1000000;
+            parameters.initial_max_data = 0x800000;
+            // parameters.max_ack_delay = 0ull;
+            // parameters.min_ack_delay = 0ull;
+            picoquic_set_default_tp(quic, &parameters);
 
-            picoquic_set_key_log_file_from_env(quic);
-            picoquic_set_qlog(quic, qlog_dir);
-            picoquic_set_log_level(quic, 1);
+            picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm);
+
+            // picoquic_set_key_log_file_from_env(quic);
+            // picoquic_set_qlog(quic, qlog_dir);
+            // picoquic_set_log_level(quic, 1);
         }
     }
 
@@ -550,7 +605,7 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
     }
 
     /* Wait for packets */
-    ret = picoquic_packet_loop(quic, 0, server_address.ss_family, 0, 0, 0, sample_client_loop_cb, &client_ctx);
+    ret = picoquic_packet_loop(quic, 0, server_address.ss_family, 0, 0, 1, sample_client_loop_cb, &client_ctx);
 
     /* Done. At this stage, we could print out statistics, etc. */
     sample_client_report(&client_ctx);

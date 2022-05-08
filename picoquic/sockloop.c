@@ -113,6 +113,9 @@ int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE 
     uint16_t * sock_ports, int socket_buffer_size, int nb_sockets_max)
 {
     int nb_sockets = (local_af == AF_UNSPEC) ? 2 : 1;
+    if (local_port == 4433) {
+        nb_sockets *= 2;
+    } 
 
     /* Compute how many sockets are necessary */
     if (nb_sockets > nb_sockets_max) {
@@ -121,6 +124,10 @@ int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE 
     } else if (local_af == AF_UNSPEC) {
         sock_af[0] = AF_INET;
         sock_af[1] = AF_INET6;
+        if (local_port == 4433) {
+            sock_af[2] = AF_INET;
+            sock_af[3] = AF_INET6;
+        }
     }
     else if (local_af == AF_INET || local_af == AF_INET6) {
         sock_af[0] = local_af;
@@ -134,6 +141,10 @@ int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE 
         struct sockaddr_storage local_address;
         int recv_set = 0;
         int send_set = 0;
+
+        if (i == 2 && local_port == 4433) {
+            local_port += 1;
+        }
         
         if ((s_socket[i] = socket(sock_af[i], SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET ||
             picoquic_socket_set_ecn_options(s_socket[i], sock_af[i], &recv_set, &send_set) != 0 ||
@@ -344,11 +355,18 @@ int picoquic_packet_loop(picoquic_quic_t* quic,
                         SOCKET_TYPE send_socket = INVALID_SOCKET;
                         bytes_sent += send_length;
 
+                        int found_match = 0;
                         for (int i = 0; i < nb_sockets; i++) {
-                            if (sock_af[i] == peer_addr.ss_family) {
+                            if (((struct sockaddr_in*) & local_addr)->sin_port == sock_ports[i]) {
+                                found_match = 1;
+                            }
+                            if (sock_af[i] == peer_addr.ss_family && (nb_sockets != 4 || (((struct sockaddr_in*) & local_addr)->sin_port == sock_ports[i]))) {
                                 send_socket = s_socket[i];
                                 break;
                             }
+                        }
+                        if (!found_match) {
+                            printf("%d, local_addr_in4->sin_port: %hu\n", nb_sockets, ((struct sockaddr_in*) & addr_to)->sin_port);
                         }
 
                         if (send_socket == INVALID_SOCKET) {

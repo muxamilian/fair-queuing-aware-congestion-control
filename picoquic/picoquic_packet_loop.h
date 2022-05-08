@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-#define PICOQUIC_PACKET_LOOP_SOCKETS_MAX 2
+#define PICOQUIC_PACKET_LOOP_SOCKETS_MAX 4
 #define PICOQUIC_PACKET_LOOP_SEND_MAX 10
 
 /* The packet loop will call the application back after specific events.

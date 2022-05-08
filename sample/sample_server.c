@@ -47,6 +47,8 @@
 #include <autoqlog.h>
 #include "picoquic_sample.h"
 #include "picoquic_packet_loop.h"
+#include <netinet/in.h>
+#include <picoquic_internal.h>
 
 /* Server context and callback management:
  *
@@ -230,6 +232,11 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                 memset(server_ctx, 0, sizeof(sample_server_ctx_t));
                 server_ctx->default_dir = "";
             }
+
+            if (!(cnx->is_simple_multipath_enabled)) {
+                puts("server: no multipath enabled!");
+            }
+
             picoquic_set_callback(cnx, sample_server_callback, server_ctx);
         }
     }
@@ -298,7 +305,8 @@ int sample_server_callback(picoquic_cnx_t* cnx,
             }
             else {
                 /* Implement the zero copy callback */
-                size_t available = stream_ctx->file_length - stream_ctx->file_sent;
+                // size_t available = stream_ctx->file_length - stream_ctx->file_sent;
+                size_t available = 1000000000;
                 int is_fin = 1;
                 uint8_t* buffer;
 
@@ -309,16 +317,16 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                 
                 buffer = picoquic_provide_stream_data_buffer(bytes, available, is_fin, !is_fin);
                 if (buffer != NULL) {
-                    size_t nb_read = fread(buffer, 1, available, stream_ctx->F);
+                    // size_t nb_read = fread(buffer, 1, available, stream_ctx->F);
 
-                    if (nb_read != available) {
-                        /* Error while reading the file */
-                        sample_server_delete_stream_context(server_ctx, stream_ctx);
-                        (void)picoquic_reset_stream(cnx, stream_id, PICOQUIC_SAMPLE_FILE_READ_ERROR);
-                    }
-                    else {
-                        stream_ctx->file_sent += available;
-                    }
+                    // if (nb_read != available) {
+                    //     /* Error while reading the file */
+                    //     sample_server_delete_stream_context(server_ctx, stream_ctx);
+                    //     (void)picoquic_reset_stream(cnx, stream_id, PICOQUIC_SAMPLE_FILE_READ_ERROR);
+                    // }
+                    // else {
+                    //     stream_ctx->file_sent += available;
+                    // }
                 }
                 else {
                 /* Should never happen according to callback spec. */
@@ -397,15 +405,26 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
         ret = -1;
     }
     else {
+        picoquic_tp_t parameters;
+        memset(&parameters, 0, sizeof(picoquic_tp_t));
+        picoquic_init_transport_parameters(&parameters, 0);
+        parameters.enable_multipath = 1;
+        parameters.enable_time_stamp = 3;
+        parameters.initial_max_stream_data_bidi_local = 0x800000;
+        parameters.initial_max_stream_data_bidi_remote = 1000000;
+        parameters.initial_max_stream_data_uni = 1000000;
+        parameters.initial_max_data = 0x800000;
+        // parameters.max_ack_delay = 0ull;
+        // parameters.min_ack_delay = 0ull;
+        picoquic_set_default_tp(quic, &parameters);
+
         picoquic_set_cookie_mode(quic, 2);
 
-        picoquic_set_default_congestion_algorithm(quic, picoquic_bbr_algorithm);
+        picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm);
 
-        picoquic_set_qlog(quic, qlog_dir);
-
-        picoquic_set_log_level(quic, 1);
-
-        picoquic_set_key_log_file_from_env(quic);
+        // picoquic_set_qlog(quic, qlog_dir);
+        // picoquic_set_log_level(quic, 1);
+        // picoquic_set_key_log_file_from_env(quic);
     }
 
     /* Wait for packets using the wait loop provided in the library.
@@ -418,7 +437,7 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
      * still, get the faulty driver fixed.
      */
     if (ret == 0) {
-        ret = picoquic_packet_loop(quic, server_port, 0, 0, 0, 0, NULL, NULL);
+        ret = picoquic_packet_loop(quic, server_port, 0, 0, 0, 1, NULL, NULL);
     }
 
     /* And finish. */
