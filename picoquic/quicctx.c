@@ -97,7 +97,7 @@ const picoquic_version_parameters_t picoquic_supported_versions[] = {
         PICOQUIC_LABEL_QUIC_V1_KEY_BASE,
         PICOQUIC_LABEL_V1_TRAFFIC_UPDATE,
         PICOQUIC_V1_VERSION},
-    { PICOQUIC_V2_VERSION_DRAFT_01,
+    { PICOQUIC_V2_VERSION,
         sizeof(picoquic_cleartext_v2_salt),
         picoquic_cleartext_v2_salt,
         sizeof(picoquic_retry_protection_v2),
@@ -105,14 +105,6 @@ const picoquic_version_parameters_t picoquic_supported_versions[] = {
         PICOQUIC_LABEL_QUIC_V2_KEY_BASE,
         PICOQUIC_LABEL_V2_TRAFFIC_UPDATE,
         PICOQUIC_V2_VERSION},
-    { PICOQUIC_V2_VERSION_DRAFT,
-        sizeof(picoquic_cleartext_v2_salt),
-        picoquic_cleartext_v2_salt,
-        sizeof(picoquic_retry_protection_v2),
-        picoquic_retry_protection_v2,
-        PICOQUIC_LABEL_QUIC_V2_KEY_BASE,
-        PICOQUIC_LABEL_V2_TRAFFIC_UPDATE,
-        PICOQUIC_V1_VERSION},
     { PICOQUIC_POST_IESG_VERSION,
         sizeof(picoquic_cleartext_v1_salt),
         picoquic_cleartext_v1_salt,
@@ -2985,10 +2977,9 @@ picoquic_cnx_t* picoquic_create_cnx(picoquic_quic_t* quic,
         cnx->local_cnxid_oldest_created = start_time;
 
         /* Initialize the connection ID stash */
-        
-        /* Should return 0, since this is the first path */
         ret = picoquic_create_path(cnx, start_time, NULL, addr_to);
         if (ret == 0) {
+            /* Should return 0, since this is the first path */
             ret = picoquic_init_cnxid_stash(cnx);
         }
 
@@ -3232,6 +3223,10 @@ picoquic_cnx_t* picoquic_create_cnx(picoquic_quic_t* quic,
             picoquic_delete_cnx(cnx);
             cnx = NULL;
         }
+    }
+
+    if (quic->use_unique_log_names) {
+        picoquic_crypto_random(quic, &cnx->log_unique, sizeof(cnx->log_unique));
     }
 
     if (cnx != NULL && !cnx->client_mode) {
@@ -3484,6 +3479,11 @@ void picoquic_set_log_level(picoquic_quic_t* quic, int log_level)
 {
     /* Only two level for now: log first 100 packets, or log everything. */
     quic->use_long_log = (log_level > 0) ? 1 : 0;
+}
+
+void picoquic_use_unique_log_names(picoquic_quic_t* quic, int use_unique_log_names)
+{
+    quic->use_unique_log_names = use_unique_log_names;
 }
 
 void picoquic_set_random_initial(picoquic_quic_t* quic, int random_initial)
@@ -4271,8 +4271,7 @@ int picoquic_process_version_upgrade(picoquic_cnx_t* cnx, int old_version_index,
     if (new_version_index == old_version_index) {
         /* not an upgrade, nothing to do. */
         ret = 0;
-    } else if (picoquic_supported_versions[new_version_index].version == PICOQUIC_V2_VERSION_DRAFT || 
-        picoquic_supported_versions[new_version_index].version == PICOQUIC_V2_VERSION_DRAFT_01 ) {
+    } else if (picoquic_supported_versions[new_version_index].version == PICOQUIC_V2_VERSION) {
         if (picoquic_supported_versions[old_version_index].version == PICOQUIC_V1_VERSION) {
             /* Supported */
             ret = 0;

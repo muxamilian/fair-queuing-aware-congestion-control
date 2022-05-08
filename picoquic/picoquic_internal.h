@@ -35,7 +35,7 @@
 extern "C" {
 #endif
 
-#define PICOQUIC_VERSION "1.00d"
+#define PICOQUIC_VERSION "1.01"
 
 #ifndef PICOQUIC_MAX_PACKET_SIZE
 #define PICOQUIC_MAX_PACKET_SIZE 1536
@@ -200,9 +200,7 @@ typedef enum {
 #define PICOQUIC_TWENTYFIRST_INTEROP_VERSION 0xFF000021
 #define PICOQUIC_POST_IESG_VERSION 0xFF000022
 #define PICOQUIC_V1_VERSION 0x00000001
-#define PICOQUIC_V2_VERSION 0x00000002
-#define PICOQUIC_V2_VERSION_DRAFT 0xFF020000
-#define PICOQUIC_V2_VERSION_DRAFT_01 0x709A50C4
+#define PICOQUIC_V2_VERSION 0x709a50c4
 #define PICOQUIC_INTERNAL_TEST_VERSION_1 0x50435130
 #define PICOQUIC_INTERNAL_TEST_VERSION_2 0x50435131
 
@@ -634,6 +632,7 @@ typedef struct st_picoquic_quic_t {
     unsigned int is_cert_verifier_custom : 1;
     unsigned int use_long_log : 1;
     unsigned int should_close_log : 1;
+    unsigned int use_unique_log_names : 1; /* Add 64 bit random number to log names for uniqueness */
     unsigned int dont_coalesce_init : 1; /* test option to turn of packet coalescing on server */
     unsigned int one_way_grease_quic_bit : 1; /* Grease of QUIC bit, but do not announce support */
     unsigned int log_pn_dec : 1; /* Log key hashes on key changes to debug crypto */
@@ -646,6 +645,7 @@ typedef struct st_picoquic_quic_t {
     unsigned int enforce_client_only : 1; /* Do not authorize incoming connections */
     unsigned int is_flow_control_limited : 1; /* Enforce flow control limit for tests */
     unsigned int test_large_server_flight : 1; /* Use TP to ensure server flight is at least 8K */
+    unsigned int is_port_blocking_disabled : 1; /* Do not check client port on incoming connections */
 
     picoquic_stateless_packet_t* pending_stateless_packet;
 
@@ -1382,6 +1382,8 @@ typedef struct st_picoquic_cnx_t {
     picoquic_stateless_packet_t* first_sooner;
     picoquic_stateless_packet_t* last_sooner;
 
+    /* Log handling */
+    uint16_t log_unique;
     FILE* f_binlog;
     char* binlog_file_name;
 
