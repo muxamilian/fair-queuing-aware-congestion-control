@@ -1,0 +1,5 @@
+TOTAL THROUGHPUT
+tshark -n -r cbbf10b08284af79.client.pcap -q -z io,stat,0,"BYTES()udp.srcport == 4433 || udp.srcport == 4434"
+
+PLOT THROUGHPUT
+tshark -n -r ade18b9a0557a041.client.pcap -q -z io,stat,0.1,"BYTES()udp.srcport == 4433 || udp.srcport == 4434" | grep '<>' | awk '{print $2","$6}' | python plot_bandwidth.py
