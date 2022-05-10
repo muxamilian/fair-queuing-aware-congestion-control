@@ -48,6 +48,7 @@
 #include <picoquic_packet_loop.h>
 #include "picoquic_sample.h"
 #include <picoquic_internal.h>
+#include <time.h>
 
  /* Client context and callback management:
   *
@@ -196,6 +197,7 @@ static void sample_client_free_context(sample_client_ctx_t* client_ctx)
     client_ctx->last_stream = NULL;
 }
 
+uint64_t end_time = 0;
 
 int sample_client_callback(picoquic_cnx_t* cnx,
     uint64_t stream_id, uint8_t* bytes, size_t length,
@@ -237,6 +239,16 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                      * When formatting the file_path, verify that the directory name is zero-length,
                      * or terminated by a proper file separator.
                      */
+
+                    const char* max_time = getenv("MAX_TIME");
+                    if (max_time != NULL) {
+                        uint64_t ret;
+                        ret = atoi(max_time);
+                        end_time = (uint64_t) time(NULL) + ret;
+                        printf("end_time: %lu, max_time: %lu\n", end_time, ret);
+                    } else {
+                        puts("Got no MAX_TIME");
+                    }
 
                     if (!(cnx->is_simple_multipath_enabled)) {
                         puts("client: no multipath enabled!");
@@ -306,6 +318,12 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                         fprintf(stderr, "Could not open the file: %s\n", file_path);
                         ret = -1;
                     }
+                }
+
+                uint64_t current_time = (uint64_t) time(NULL);
+                if (end_time > 0 && current_time >= end_time) {
+                    ret = picoquic_close(cnx, 0);
+                    puts("Reached end time");
                 }
 
                 if (ret == 0 && length > 0) {
@@ -550,9 +568,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
 
             picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm);
 
-            // picoquic_set_key_log_file_from_env(quic);
-            // picoquic_set_qlog(quic, qlog_dir);
-            // picoquic_set_log_level(quic, 1);
+            picoquic_set_key_log_file_from_env(quic);
+            picoquic_set_qlog(quic, qlog_dir);
+            picoquic_set_log_level(quic, 1);
         }
     }
 

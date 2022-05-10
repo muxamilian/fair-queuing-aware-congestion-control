@@ -4363,13 +4363,11 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
 
     int next_path = rand() % 2;
 
-    cnx->last_path_polled++;
-    if (cnx->last_path_polled > cnx->nb_paths) {
-        cnx->last_path_polled = 0;
-    }
+    // cnx->last_path_polled++;
+    // if (cnx->last_path_polled > cnx->nb_paths) {
+    //     cnx->last_path_polled = 0;
+    // }
 
-    // for (i = 0; i < cnx->nb_paths; i++) {
-    // for (i = cnx->nb_paths-1; i >= 0; i--) {
     for (i = (next_path==0 ? 0 : cnx->nb_paths-1); next_path==0 ? i < cnx->nb_paths : i >= 0; next_path==0 ? i++ : i--) {
         cnx->path[i]->is_nominal_ack_path = 0;
         if (cnx->path[i]->path_is_demoted) {

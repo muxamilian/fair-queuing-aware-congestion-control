@@ -1354,7 +1354,7 @@ typedef struct st_picoquic_cnx_t {
     picoquic_path_t ** path;
     int nb_paths;
     int nb_path_alloc;
-    int last_path_polled;
+    // int last_path_polled;
     uint64_t path_sequence_next;
     picoquic_path_t* nominal_path_for_ack;
 

@@ -6,6 +6,7 @@
 * ~Randomize pacing to make sure that not one path dominates~
 * ~Test with cross traffic~
 * ~Implement congestion window decrease on detection of FQ~
+* Plot delay and throughput
 * Test how often it detects FQ (confusion matrix)
 * Measure how much it can reduce latency
 * Write paper

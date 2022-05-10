@@ -13,6 +13,7 @@ import subprocess
 
 mininet.clean.cleanup()
 subprocess.run('killall picoquic_sample'.split(' '))
+subprocess.run('killall iperf3'.split(' '))
 
 class MyTopo(mininet.topo.Topo):
     "Simple topology example."
@@ -53,6 +54,7 @@ class Opts:
     pass
 
 iperf = True
+max_time = 10
 
 def generate_tc_commands(if_name, with_delay=False):
     opt = Opts()
@@ -64,7 +66,8 @@ def generate_tc_commands(if_name, with_delay=False):
     opt.buffer_size = None
     # opt.buffer_size = int(1. * math.ceil(bdp))
     # opt.buffer_size = 10
-    opt.qdisc = 'pfifo'
+    opt.qdisc = 'fq'
+    # opt.qdisc = 'pfifo'
     opt.interface = if_name
 
     if with_delay:
@@ -109,8 +112,8 @@ print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 
 debug = {"stdout": None, "stderr": None}
 
-server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap'.split(' '), **debug)
-client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap'.split(' '), **debug)
+server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap (tcp || udp) and ip'.split(' '), **debug)
+client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap (tcp || udp) and ip'.split(' '), **debug)
 
 # server_popen = h2.popen('iperf3 -s -1'.split(' '), **debug)
 # time.sleep(1)
@@ -121,9 +124,12 @@ if iperf:
 time.sleep(1)
 if iperf:
     iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **debug)
+os.environ["MAX_TIME"] = str(max_time)
+# client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), env={'END_TIME': "10"}, **debug)
 client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), **debug)
 
-time.sleep(30)
+client_popen.communicate()
+
 if iperf:
     iperf_client_popen.terminate()
     iperf_server_popen.terminate()
@@ -138,7 +144,7 @@ if iperf:
     if err:
         print("iperf server err", err.decode("utf-8"))
 
-client_popen.terminate()
+# client_popen.terminate()
 
 out, err = client_popen.communicate()
 if out:

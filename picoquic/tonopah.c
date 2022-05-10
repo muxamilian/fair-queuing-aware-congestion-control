@@ -49,7 +49,7 @@ typedef struct st_picoquic_tonopah_interval_info_t {
     struct st_picoquic_tonopah_interval_info_t* prev;
 } picoquic_tonopah_interval_info_t;
 
-#define INTERVALS_REQUIRED 10
+#define INTERVALS_REQUIRED 8
 
 picoquic_tonopah_interval_info_t* interval_list_first = NULL;
 picoquic_tonopah_interval_info_t* interval_list_last = NULL;
@@ -272,7 +272,7 @@ uint64_t updated_path1 = 0;
 
 uint64_t last_change = 0;
 
-double ratio = 0.625;
+double ratio = 9./16.;
 
 picoquic_path_t* path1 = NULL;
 picoquic_path_t* path2 = NULL;
