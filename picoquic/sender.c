@@ -1786,7 +1786,9 @@ int picoquic_retransmit_needed(picoquic_cnx_t* cnx,
     }
     else if (cnx->is_simple_multipath_enabled && cnx->cnx_state == picoquic_state_ready) {
         /* Find the path with the lowest repeat wait? */
-        for (int i_path = 0; i_path < cnx->nb_paths; i_path++) {
+        int next_path = rand() % 2;
+        for (int i_path = (next_path==0 ? 0 : cnx->nb_paths-1); next_path==0 ? i_path < cnx->nb_paths : i_path >= 0; next_path==0 ? i_path++ : i_path--) {
+        // for (int i_path = 0; i_path < cnx->nb_paths; i_path++) {
             picoquic_packet_t* old_p = cnx->path[i_path]->path_packet_first;
 
             if (length == 0) {
@@ -3909,7 +3911,7 @@ int picoquic_prepare_packet_ready(picoquic_cnx_t* cnx, picoquic_path_t* path_x, 
                 }
 
                 /* If necessary, encode the max data frame */
-                if (ret == 0){
+                if (ret == 0) {
                     if (cnx->is_flow_control_limited) {
                         if (cnx->data_received + (cnx->local_parameters.initial_max_data / 2) > cnx->maxdata_local) {
                             bytes_next = picoquic_format_max_data_frame(cnx, bytes_next, bytes_max, &more_data, &is_pure_ack,
@@ -4363,11 +4365,6 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
 
     int next_path = rand() % 2;
 
-    // cnx->last_path_polled++;
-    // if (cnx->last_path_polled > cnx->nb_paths) {
-    //     cnx->last_path_polled = 0;
-    // }
-
     for (i = (next_path==0 ? 0 : cnx->nb_paths-1); next_path==0 ? i < cnx->nb_paths : i >= 0; next_path==0 ? i++ : i--) {
         cnx->path[i]->is_nominal_ack_path = 0;
         if (cnx->path[i]->path_is_demoted) {
@@ -4444,7 +4441,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
                     cnx->path[i]->polled++;
 
                     if (picoquic_is_sending_authorized_by_pacing(cnx, cnx->path[i], current_time, &pacing_time_next)) {
-                        if (cnx->path[i]->last_sent_time < last_sent_pacing) {
+                        if ((cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) || cnx->path[i]->last_sent_time < last_sent_pacing) {
                             last_sent_pacing = cnx->path[i]->last_sent_time;
                             data_path_pacing = i;
                             if (i == i_min_rtt) {
@@ -4458,7 +4455,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
                         }
 
                         if (not_cwin_limited) {
-                            if (cnx->path[i]->last_sent_time < last_sent_cwin) {
+                            if ((cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) || cnx->path[i]->last_sent_time < last_sent_cwin) {
                                 last_sent_cwin = cnx->path[i]->last_sent_time;
                                 data_path_cwin = i;
                             }
@@ -4474,6 +4471,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
             }
         }
     }
+    // printf("i %d\n", i);
 
     /* Ensure that at most one path is marked as nominal ack path */
     for (i += 1; i < cnx->nb_paths; i++) {
@@ -4511,14 +4509,16 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
             path_id = data_path_pacing;
         }
         else {
-            uint64_t path_wake_time = pacing_time_next;
-            if (challenge_time_next < path_wake_time) {
-                path_wake_time = challenge_time_next;
-            }
-            if (path_wake_time < *next_wake_time) {
-                *next_wake_time = path_wake_time;
-                SET_LAST_WAKE(cnx->quic, PICOQUIC_SENDER);
-            }
+            // if (!is_ack_needed) {
+                uint64_t path_wake_time = pacing_time_next;
+                if (challenge_time_next < path_wake_time) {
+                    path_wake_time = challenge_time_next;
+                }
+                if (path_wake_time < *next_wake_time) {
+                    *next_wake_time = path_wake_time;
+                    SET_LAST_WAKE(cnx->quic, PICOQUIC_SENDER);
+                }
+            // }
             path_id = 0;
             if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
                 path_id = next_path;
@@ -4774,6 +4774,8 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
             else if (packet_size != *send_msg_size) {
                 if (*send_length > 0) {
                     if (packet_size == 0 && *send_length < 8*(*send_msg_size)) {
+                        puts("Didn't expect to end up here either");
+                        abort();
                         if (cnx->path[path_id]->cwin <= cnx->path[path_id]->bytes_in_transit) {
                             puts("Didn't expect to end up here");
                             abort();
@@ -4853,6 +4855,8 @@ int picoquic_prepare_next_packet_ex(picoquic_quic_t* quic,
     }
 
     if (sp != NULL) {
+        puts("Magically got some packet from before. Didn't expect this to happen!");
+        // abort();
         if (sp->length > send_buffer_max) {
             *send_length = 0;
         }

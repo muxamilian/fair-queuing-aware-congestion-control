@@ -357,16 +357,15 @@ int picoquic_packet_loop(picoquic_quic_t* quic,
 
                         int found_match = 0;
                         for (int i = 0; i < nb_sockets; i++) {
-                            if (((struct sockaddr_in*) & local_addr)->sin_port == sock_ports[i]) {
-                                found_match = 1;
-                            }
                             if (sock_af[i] == peer_addr.ss_family && (nb_sockets != 4 || (((struct sockaddr_in*) & local_addr)->sin_port == sock_ports[i]))) {
+                                found_match = 1;
                                 send_socket = s_socket[i];
                                 break;
                             }
                         }
                         if (!found_match) {
-                            printf("%d, local_addr_in4->sin_port: %hu\n", nb_sockets, ((struct sockaddr_in*) & addr_to)->sin_port);
+                            printf("Didn't find match with %d sockets, local_addr_in4->sin_port: %hu\n", nb_sockets, ((struct sockaddr_in*) & addr_to)->sin_port);
+                            send_socket = s_socket[0];
                         }
 
                         if (send_socket == INVALID_SOCKET) {

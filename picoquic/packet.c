@@ -1007,6 +1007,7 @@ void picoquic_prepare_version_negotiation(
 
             picoquic_log_quic_pdu(quic, 1, picoquic_get_quic_time(quic), 0, addr_to, addr_from, sp->length);
 
+            puts("Send back version negotioation");
             picoquic_queue_stateless_packet(quic, sp);
         }
     }
@@ -1066,6 +1067,7 @@ void picoquic_process_unexpected_cnxid(
 
             picoquic_log_context_free_app_message(quic, &sp->initial_cid, "Unexpected connection ID, sending stateless reset.\n");
 
+            puts("Unexpected cnxid");
             picoquic_queue_stateless_packet(quic, sp);
             quic->stateless_reset_next_time = current_time + quic->stateless_reset_min_interval;
         }
@@ -1129,11 +1131,12 @@ void picoquic_queue_stateless_retry(picoquic_cnx_t* cnx,
             bytes, 0, pn_length, sp->length,
             bytes, sp->length, picoquic_get_quic_time(cnx->quic));
 
+        puts("Stateless retry");
         picoquic_queue_stateless_packet(cnx->quic, sp);
     }
 }
 
-/* Queue a close message for an incoming connection attemt that was rejected.
+/* Queue a close message for an incoming connection attempt that was rejected.
  * The connection context can then be immediately frees.
  */
 void picoquic_queue_immediate_close(picoquic_cnx_t* cnx, uint64_t current_time)
@@ -1144,6 +1147,7 @@ void picoquic_queue_immediate_close(picoquic_cnx_t* cnx, uint64_t current_time)
         int ret = picoquic_prepare_packet_ex(cnx, current_time, sp->bytes, PICOQUIC_MAX_PACKET_SIZE,
             &sp->length, &sp->addr_to, &sp->addr_local, &sp->if_index_local, NULL);
         if (ret == 0 && sp->length > 0) {
+            puts("Immediate close");
             picoquic_queue_stateless_packet(cnx->quic, sp);
         }
         else {

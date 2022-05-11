@@ -422,9 +422,9 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
 
         picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm);
 
-        // picoquic_set_qlog(quic, qlog_dir);
-        // picoquic_set_log_level(quic, 1);
-        // picoquic_set_key_log_file_from_env(quic);
+        picoquic_set_qlog(quic, qlog_dir);
+        picoquic_set_log_level(quic, 1);
+        picoquic_set_key_log_file_from_env(quic);
     }
 
     /* Wait for packets using the wait loop provided in the library.

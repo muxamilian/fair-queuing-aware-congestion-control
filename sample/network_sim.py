@@ -53,13 +53,13 @@ os.chdir(os.path.dirname(__file__))
 class Opts:
     pass
 
-iperf = True
+iperf = False
 max_time = 10
 
 def generate_tc_commands(if_name, with_delay=False):
     opt = Opts()
     opt.delay = 50
-    opt.rate = 50
+    opt.rate = 20
     bdp = (opt.delay/1000 * opt.rate*1000000)/(1500*8)
     if with_delay:
         print("bdp", bdp)
@@ -74,7 +74,7 @@ def generate_tc_commands(if_name, with_delay=False):
         if opt.qdisc != 'fq':
             qdisc_string = f"{opt.qdisc}"
             if opt.buffer_size is not None: 
-                 qdisc_string += f" limit {int(math.ceil(opt.buffer_size))}"
+                 qdisc_string += f" limit {int(math.ceil(opt.buffer_size/2))}"
         else:
             qdisc_string = f"{opt.qdisc} nopacing"
             if opt.buffer_size is not None: 

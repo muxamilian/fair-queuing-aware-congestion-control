@@ -54,6 +54,17 @@ typedef struct st_picoquic_tonopah_interval_info_t {
 picoquic_tonopah_interval_info_t* interval_list_first = NULL;
 picoquic_tonopah_interval_info_t* interval_list_last = NULL;
 
+uint64_t updated_path0 = 0;
+uint64_t updated_path1 = 0;
+
+uint64_t last_change = 0;
+
+double ratio = 9./16.;
+
+picoquic_path_t* path1 = NULL;
+picoquic_path_t* path2 = NULL;
+picoquic_path_t* dominant_path = NULL;
+
 size_t get_interval_info_list_len(picoquic_tonopah_interval_info_t* list) {
     picoquic_tonopah_interval_info_t* current_elem = list;
     size_t len = 0;
@@ -104,7 +115,9 @@ static void picoquic_tonopah_sim_enter_recovery(
     picoquic_congestion_notification_t notification,
     uint64_t current_time)
 {
-    delete_info_list();
+    if (path1 != NULL && path2 != NULL) {
+        delete_info_list();
+    }
     nr_state->ssthresh = nr_state->cwin / 2;
     if (nr_state->ssthresh < PICOQUIC_CWIN_MINIMUM) {
         nr_state->ssthresh = PICOQUIC_CWIN_MINIMUM;
@@ -267,17 +280,6 @@ static void picoquic_tonopah_init(picoquic_path_t* path_x, uint64_t current_time
     }
 }
 
-uint64_t updated_path0 = 0;
-uint64_t updated_path1 = 0;
-
-uint64_t last_change = 0;
-
-double ratio = 9./16.;
-
-picoquic_path_t* path1 = NULL;
-picoquic_path_t* path2 = NULL;
-picoquic_path_t* dominant_path = NULL;
-
 int aggregate_intervals(picoquic_tonopah_interval_info_t* list) {
     picoquic_tonopah_interval_info_t* current_elem = list;
     size_t len = 0;
@@ -430,6 +432,8 @@ picoquic_tonopah_interval_info_t* find_right_interval(picoquic_cnx_t* cnx, picoq
     return NULL;
 }
 
+picoquic_cnx_t * last_cnx = NULL;
+
 /*
  * Properly implementing New Reno requires managing a number of
  * signals, such as packet losses or acknowledgements. We attempt
@@ -449,6 +453,8 @@ static void picoquic_tonopah_notify(
 #ifdef _WINDOWS
     UNREFERENCED_PARAMETER(lost_packet_number);
 #endif
+
+    last_cnx = cnx;
 
     assert(cnx->nb_paths <= 2);
 
@@ -586,7 +592,12 @@ static void picoquic_tonopah_notify(
 /* Release the state of the congestion control algorithm */
 static void picoquic_tonopah_delete(picoquic_path_t* path_x)
 {
-    // printf("updated_path0: %lu; updated_path1: %lu\n", updated_path0, updated_path1);
+    if (last_cnx != NULL) {
+        in_port_t s_port = ((struct sockaddr_in*) &(last_cnx->path[0]->local_addr))->sin_port;
+        printf("src_port: %hu, selected1: %d; congested1: %d, paced1: %d, selected2: %d, congested2: %d, paced2: %d\n", s_port, 
+            last_cnx->path[0]->selected, last_cnx->path[0]->congested, last_cnx->path[0]->paced, 
+            last_cnx->path[1]->selected, last_cnx->path[1]->congested, last_cnx->path[1]->paced);
+    }
     if (path_x->congestion_alg_state != NULL) {
         free(path_x->congestion_alg_state);
         path_x->congestion_alg_state = NULL;
