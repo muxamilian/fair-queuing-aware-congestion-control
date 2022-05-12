@@ -55,6 +55,7 @@ class Opts:
 
 iperf = False
 max_time = 10
+congestion_control = "tonopah"
 
 def generate_tc_commands(if_name, with_delay=False):
     opt = Opts()
@@ -65,9 +66,9 @@ def generate_tc_commands(if_name, with_delay=False):
         print("bdp", bdp)
     opt.buffer_size = None
     # opt.buffer_size = int(1. * math.ceil(bdp))
-    # opt.buffer_size = 10
-    opt.qdisc = 'fq'
-    # opt.qdisc = 'pfifo'
+    opt.buffer_size = 10
+    # opt.qdisc = 'fq'
+    opt.qdisc = 'pfifo'
     opt.interface = if_name
 
     if with_delay:
@@ -111,6 +112,8 @@ print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 # quit()
 
 debug = {"stdout": None, "stderr": None}
+os.environ["MAX_TIME"] = str(max_time)
+os.environ["CONGESTION_CONTROL"] = congestion_control
 
 server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap (tcp || udp) and ip'.split(' '), **debug)
 client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap (tcp || udp) and ip'.split(' '), **debug)
@@ -124,7 +127,6 @@ if iperf:
 time.sleep(1)
 if iperf:
     iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **debug)
-os.environ["MAX_TIME"] = str(max_time)
 # client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), env={'END_TIME': "10"}, **debug)
 client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), **debug)
 

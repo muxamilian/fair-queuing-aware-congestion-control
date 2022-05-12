@@ -4363,7 +4363,11 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     int is_min_rtt_pacing_ok = 0;
     int is_ack_needed = 0;
 
-    int next_path = rand() % 2;
+    int next_path = -1;
+
+    if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+        next_path = rand() % 2;
+    }
 
     for (i = (next_path==0 ? 0 : cnx->nb_paths-1); next_path==0 ? i < cnx->nb_paths : i >= 0; next_path==0 ? i++ : i--) {
         cnx->path[i]->is_nominal_ack_path = 0;

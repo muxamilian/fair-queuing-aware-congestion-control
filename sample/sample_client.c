@@ -250,34 +250,38 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                         puts("Got no MAX_TIME");
                     }
 
-                    if (!(cnx->is_simple_multipath_enabled)) {
-                        puts("client: no multipath enabled!");
-                    }
+                    const char* congestion_control = getenv("CONGESTION_CONTROL");
+                    if (strcmp(congestion_control, "tonopah") == 0) {
 
-                    struct sockaddr_in* local_ref = (struct sockaddr_in*) &(cnx->path[0]->local_addr);
-                    struct sockaddr_in* peer_ref = (struct sockaddr_in*) &(cnx->path[0]->peer_addr);
+                        if (!(cnx->is_simple_multipath_enabled)) {
+                            puts("client: no multipath enabled!");
+                        }
 
-                    struct sockaddr_in* local = malloc(sizeof(struct sockaddr_storage));
-                    memcpy(local, local_ref, sizeof(*local_ref));
+                        struct sockaddr_in* local_ref = (struct sockaddr_in*) &(cnx->path[0]->local_addr);
+                        struct sockaddr_in* peer_ref = (struct sockaddr_in*) &(cnx->path[0]->peer_addr);
 
-                    struct sockaddr_in* peer = malloc(sizeof(struct sockaddr_storage));
-                    memcpy(peer, peer_ref, sizeof(*peer_ref));
+                        struct sockaddr_in* local = malloc(sizeof(struct sockaddr_storage));
+                        memcpy(local, local_ref, sizeof(*local_ref));
 
-                    struct sockaddr_in* peer_copy = malloc(sizeof(struct sockaddr_storage));
-                    memcpy(peer_copy, peer_ref, sizeof(*peer_ref));
-                    peer_copy->sin_port = htons(ntohs(peer->sin_port) + 1);
+                        struct sockaddr_in* peer = malloc(sizeof(struct sockaddr_storage));
+                        memcpy(peer, peer_ref, sizeof(*peer_ref));
 
-                    uint16_t local_port = local->sin_port;
-                    uint16_t peer_port = peer->sin_port;
-                    uint16_t peer_port2 = peer_copy->sin_port;
-                    printf("local_port: %hu, peer_port2: %hu, peer_port: %hu\n", local_port, peer_port2, peer_port);
+                        struct sockaddr_in* peer_copy = malloc(sizeof(struct sockaddr_storage));
+                        memcpy(peer_copy, peer_ref, sizeof(*peer_ref));
+                        peer_copy->sin_port = htons(ntohs(peer->sin_port) + 1);
 
-                    uint64_t simulated_time = picoquic_current_time();
+                        uint16_t local_port = local->sin_port;
+                        uint16_t peer_port = peer->sin_port;
+                        uint16_t peer_port2 = peer_copy->sin_port;
+                        printf("local_port: %hu, peer_port2: %hu, peer_port: %hu\n", local_port, peer_port2, peer_port);
 
-                    int new_path_ret = picoquic_probe_new_path(cnx, (struct sockaddr*) peer_copy,
-                        (struct sockaddr*) local, simulated_time);
-                    if (new_path_ret != 0) {
-                        printf("Client: Creating a second path failed.\n");
+                        uint64_t simulated_time = picoquic_current_time();
+
+                        int new_path_ret = picoquic_probe_new_path(cnx, (struct sockaddr*) peer_copy,
+                            (struct sockaddr*) local, simulated_time);
+                        if (new_path_ret != 0) {
+                            printf("Client: Creating a second path failed.\n");
+                        }
                     }
 
                     // char file_path[1024];
@@ -566,7 +570,16 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
             // parameters.min_ack_delay = 0ull;
             picoquic_set_default_tp(quic, &parameters);
 
-            picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm);
+            const char* congestion_control = getenv("CONGESTION_CONTROL");
+            if (congestion_control != NULL) {
+                printf("client: %s\n", congestion_control);
+            }
+            if (congestion_control != NULL && strcmp(congestion_control, "tonopah") == 0) {
+                picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm); 
+            }
+            else {
+                picoquic_set_default_congestion_algorithm(quic, picoquic_newreno_algorithm);
+            }
 
             picoquic_set_key_log_file_from_env(quic);
             picoquic_set_qlog(quic, qlog_dir);

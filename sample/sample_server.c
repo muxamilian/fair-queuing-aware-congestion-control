@@ -420,7 +420,16 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
 
         picoquic_set_cookie_mode(quic, 2);
 
-        picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm);
+        const char* congestion_control = getenv("CONGESTION_CONTROL");
+        if (congestion_control != NULL) {
+            printf("server: %s\n", congestion_control);
+        }
+        if (congestion_control != NULL && strcmp(congestion_control, "tonopah") == 0) {
+            picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm); 
+        }
+        else {
+            picoquic_set_default_congestion_algorithm(quic, picoquic_newreno_algorithm);
+        }
 
         picoquic_set_qlog(quic, qlog_dir);
         picoquic_set_log_level(quic, 1);

@@ -112,10 +112,11 @@ static int udp_gso_available = 0;
 int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE * s_socket, int * sock_af, 
     uint16_t * sock_ports, int socket_buffer_size, int nb_sockets_max)
 {
+    const char* congestion_control = getenv("CONGESTION_CONTROL");
     int nb_sockets = (local_af == AF_UNSPEC) ? 2 : 1;
-    if (local_port == 4433) {
+    if (strcmp(congestion_control, "tonopah") == 0 && local_port == 4433) {
         nb_sockets *= 2;
-    } 
+    }
 
     /* Compute how many sockets are necessary */
     if (nb_sockets > nb_sockets_max) {
