@@ -1,3 +1,4 @@
+import glob
 import mininet
 import mininet.topo
 import mininet.net
@@ -54,7 +55,7 @@ class Opts:
     pass
 
 iperf = False
-max_time = 10
+max_time = 20
 congestion_control = "tonopah"
 
 def generate_tc_commands(if_name, with_delay=False):
@@ -66,17 +67,18 @@ def generate_tc_commands(if_name, with_delay=False):
         print("bdp", bdp)
     opt.buffer_size = None
     # opt.buffer_size = int(1. * math.ceil(bdp))
-    opt.buffer_size = 10
-    # opt.qdisc = 'fq'
-    opt.qdisc = 'pfifo'
+    # opt.buffer_size = 10
+    opt.qdisc = 'fq'
+    opt.qdisc = 'fq_codel'
+    # opt.qdisc = 'pfifo'
     opt.interface = if_name
 
     if with_delay:
-        if opt.qdisc != 'fq':
+        if opt.qdisc != 'pfifo':
             qdisc_string = f"{opt.qdisc}"
             if opt.buffer_size is not None: 
                  qdisc_string += f" limit {int(math.ceil(opt.buffer_size/2))}"
-        else:
+        elif opt.qdisc == 'fq':
             qdisc_string = f"{opt.qdisc} nopacing"
             if opt.buffer_size is not None: 
                  qdisc_string += f" flow_limit {int(math.ceil(opt.buffer_size/2))}"
@@ -176,6 +178,14 @@ if out:
     print("server out", out.decode("utf-8"))
 if err:
     print("server err", err.decode("utf-8"))
+
+files = list(filter(os.path.isfile, glob.glob("./*.client.qlog")))
+files.sort(key=lambda x: os.path.getmtime(x))
+most_recent_file = files[-1]
+
+if os.path.isfile("client.qlog"):
+    os.remove("client.qlog")
+os.symlink(most_recent_file, "client.qlog")
 
 mininet.cli.CLI(net)
 net.stop()

@@ -49,7 +49,7 @@ typedef struct st_picoquic_tonopah_interval_info_t {
     struct st_picoquic_tonopah_interval_info_t* prev;
 } picoquic_tonopah_interval_info_t;
 
-#define INTERVALS_REQUIRED 8
+#define INTERVALS_REQUIRED 10
 
 picoquic_tonopah_interval_info_t* interval_list_first = NULL;
 picoquic_tonopah_interval_info_t* interval_list_last = NULL;
@@ -116,6 +116,7 @@ static void picoquic_tonopah_sim_enter_recovery(
     uint64_t current_time)
 {
     if (path1 != NULL && path2 != NULL) {
+        printf("Recovery: ");
         delete_info_list();
     }
     nr_state->ssthresh = nr_state->cwin / 2;
@@ -350,6 +351,7 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
                 // puts("Detected fq, lowering cw");
                 nr_state->ssthresh = (uint64_t) (((double) nr_state->cwin) * (7./8.));
                 nr_state->cwin = nr_state->ssthresh;
+                printf("FQ detected: ");
                 delete_info_list();
             }
             picoquic_tonopah_interval_info_t* new_interval = (picoquic_tonopah_interval_info_t*) malloc(sizeof(picoquic_tonopah_interval_info_t));

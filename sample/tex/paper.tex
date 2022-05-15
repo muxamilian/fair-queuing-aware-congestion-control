@@ -1,5 +1,5 @@
 \documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+% \IEEEoverridecommandlockouts
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -7,13 +7,13 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\usepackage{hyperref}
 \begin{document}
 
 \title{Fair Queuing Aware Congestion Control}
 
 \author{\IEEEauthorblockN{Maximilian Bachl}
+\IEEEauthorblockA{{\scriptsize \url{https://github.com/muxamilian/fair-queuing-aware-congestion-control}}}
 % \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
 % \textit{name of organization (of Aff.)}\\
 % City, Country \\
@@ -23,9 +23,12 @@
 \maketitle
 
 \begin{abstract}
-This document is a model and instructions for \LaTeX.
-This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
-or Math in Paper Title or Abstract.
+Fair queuing is becoming increasingly prevalent in the internet and has been shown to improve performance in many circumstances. 
+Performance could be improved even more if endpoints could detect the presence of fair queuing on a certain path and adjust their congestion control accordingly. 
+If fair queuing is detected, the congestion control would not have to take cross traffic into account, which allows for more flexibility. 
+In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path, while only adding small latency overhead and consuming no additional bandwidth. 
+When fair queuing is detected, a different congestion control is chosen, which results in reduced latency. 
+Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
 \end{abstract}
 
 % \begin{IEEEkeywords}
