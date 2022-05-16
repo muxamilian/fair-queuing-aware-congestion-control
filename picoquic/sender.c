@@ -4477,9 +4477,16 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     }
     // printf("i %d\n", i);
 
+    if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
     /* Ensure that at most one path is marked as nominal ack path */
-    for (i += 1; i < cnx->nb_paths; i++) {
-        cnx->path[i]->is_nominal_ack_path = 0;
+        for (i += 1; i < cnx->nb_paths; i++) {
+            cnx->path[i]->is_nominal_ack_path = 1;
+        }
+    } else {
+        /* Ensure that at most one path is marked as nominal ack path */
+        for (i += 1; i < cnx->nb_paths; i++) {
+            cnx->path[i]->is_nominal_ack_path = 0;
+        }
     }
 
     if (i_min_rtt >= 0 || (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2)) {

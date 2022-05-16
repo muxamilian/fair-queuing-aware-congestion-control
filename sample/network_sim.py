@@ -68,13 +68,14 @@ def generate_tc_commands(if_name, with_delay=False):
     opt.buffer_size = None
     # opt.buffer_size = int(1. * math.ceil(bdp))
     # opt.buffer_size = 10
-    opt.qdisc = 'fq'
-    opt.qdisc = 'fq_codel'
-    # opt.qdisc = 'pfifo'
+    # opt.qdisc = 'fq'
+    # opt.qdisc = 'fq_codel'
+    opt.qdisc = 'pfifo'
     opt.interface = if_name
 
+    qdisc_string = opt.qdisc
     if with_delay:
-        if opt.qdisc != 'pfifo':
+        if opt.qdisc == 'pfifo':
             qdisc_string = f"{opt.qdisc}"
             if opt.buffer_size is not None: 
                  qdisc_string += f" limit {int(math.ceil(opt.buffer_size/2))}"
@@ -82,6 +83,7 @@ def generate_tc_commands(if_name, with_delay=False):
             qdisc_string = f"{opt.qdisc} nopacing"
             if opt.buffer_size is not None: 
                  qdisc_string += f" flow_limit {int(math.ceil(opt.buffer_size/2))}"
+
     else:
         qdisc_string = opt.qdisc
 

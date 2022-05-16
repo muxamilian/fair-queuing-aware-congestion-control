@@ -166,6 +166,9 @@ void picoquic_tonopah_sim_notify(
 {
     uint64_t smoothed_rtt = path_x->smoothed_rtt;
     if (cnx->nb_paths > 1) {
+        if (cnx->nb_paths != 2) {
+            puts("Oh no, more paths than expected!");
+        }
         assert(cnx->nb_paths == 2);
         smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
     }

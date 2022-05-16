@@ -2274,7 +2274,7 @@ void picoquic_compute_ack_gap_and_delay(picoquic_cnx_t* cnx, uint64_t rtt, uint6
 {
     if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
         *ack_gap = 2;
-        *ack_delay_max = 5000ull;
+        *ack_delay_max = 10000ull;
     }
     return;
     
@@ -3596,6 +3596,9 @@ int picoquic_is_ack_needed_in_ctx(picoquic_cnx_t* cnx, picoquic_ack_context_t* a
 {
     int ret = 0;
 
+    // if (((struct sockaddr_in*) &(cnx->path[0]->local_addr))->sin_port != 4433 && !ack_ctx->act[is_opportunistic].ack_needed) {
+    //     puts("No ack needed");
+    // }
     if (ack_ctx->act[is_opportunistic].ack_needed) {
         if (pc != picoquic_packet_context_application || ack_ctx->act[is_opportunistic].ack_after_fin) {
             ret = 1;
@@ -3607,15 +3610,18 @@ int picoquic_is_ack_needed_in_ctx(picoquic_cnx_t* cnx, picoquic_ack_context_t* a
         else
         {
             uint64_t ack_gap = picoquic_ack_gap_override_if_needed(cnx, l_cid_sequence);
+            // printf("ack_gap: %lu, delay: %lu", ack_gap, cnx->ack_delay_remote);
 
             if (ack_ctx->act[is_opportunistic].highest_ack_sent + ack_gap <= picoquic_sack_list_last(&ack_ctx->sack_list) ||
                 ack_ctx->act[is_opportunistic].time_oldest_unack_packet_received + cnx->ack_delay_remote <= current_time) {
+                // puts("; doing something");
                 ret = 1;
             }
             else {
                 if (ack_ctx->act[is_opportunistic].time_oldest_unack_packet_received + cnx->ack_delay_remote < *next_wake_time) {
                     *next_wake_time = ack_ctx->act[is_opportunistic].time_oldest_unack_packet_received + cnx->ack_delay_remote;
                     SET_LAST_WAKE(cnx->quic, PICOQUIC_FRAME);
+                    // puts("; doing nothing");
                 }
             }
         }
