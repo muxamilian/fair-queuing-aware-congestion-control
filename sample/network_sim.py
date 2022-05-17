@@ -69,8 +69,8 @@ def generate_tc_commands(if_name, with_delay=False):
     # opt.buffer_size = int(1. * math.ceil(bdp))
     # opt.buffer_size = 10
     # opt.qdisc = 'fq'
-    # opt.qdisc = 'fq_codel'
-    opt.qdisc = 'pfifo'
+    opt.qdisc = 'fq_codel'
+    # opt.qdisc = 'pfifo'
     opt.interface = if_name
 
     qdisc_string = opt.qdisc

@@ -49,7 +49,7 @@ typedef struct st_picoquic_tonopah_interval_info_t {
     struct st_picoquic_tonopah_interval_info_t* prev;
 } picoquic_tonopah_interval_info_t;
 
-#define INTERVALS_REQUIRED 10
+#define INTERVALS_REQUIRED 4
 
 picoquic_tonopah_interval_info_t* interval_list_first = NULL;
 picoquic_tonopah_interval_info_t* interval_list_last = NULL;
@@ -59,7 +59,8 @@ uint64_t updated_path1 = 0;
 
 uint64_t last_change = 0;
 
-double ratio = 9./16.;
+// double ratio = 9./16.;
+double ratio = 0.5625;
 
 picoquic_path_t* path1 = NULL;
 picoquic_path_t* path2 = NULL;
@@ -115,6 +116,10 @@ static void picoquic_tonopah_sim_enter_recovery(
     picoquic_congestion_notification_t notification,
     uint64_t current_time)
 {
+    if (nr_state->alg_state == picoquic_tonopah_alg_congestion_avoidance && get_interval_info_list_len(interval_list_first) == 0) {
+        puts("Tonopah: Packet lost but ignoring it");
+        return;
+    }
     if (path1 != NULL && path2 != NULL) {
         printf("Recovery: ");
         delete_info_list();
@@ -350,7 +355,7 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
             // memset(interval_list, 0, sizeof(interval_list));
             // interval_list->first_seq_num = picoquic_cc_get_sequence_number(cnx, actual_path);
             int detected_fq = aggregate_intervals(interval_list_last);
-            if (detected_fq) {
+            if (detected_fq && nr_state->alg_state == picoquic_tonopah_alg_congestion_avoidance) {
                 // puts("Detected fq, lowering cw");
                 nr_state->ssthresh = (uint64_t) (((double) nr_state->cwin) * (7./8.));
                 nr_state->cwin = nr_state->ssthresh;
