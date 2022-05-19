@@ -383,7 +383,7 @@ int sample_client_callback(picoquic_cnx_t* cnx,
         case picoquic_callback_stateless_reset:
         case picoquic_callback_close: /* Received connection close */
         case picoquic_callback_application_close: /* Received application close */
-            fprintf(stdout, "Connection closed.\n");
+            fprintf(stdout, "Connection closed at %lu.\n", picoquic_current_time());
             /* Mark the connection as completed */
             client_ctx->is_disconnected = 1;
             /* Remove the application callback */

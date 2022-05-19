@@ -160,6 +160,7 @@ int sample_server_open_stream(sample_server_ctx_t* server_ctx, sample_server_str
                 fseek(stream_ctx->F, 0, SEEK_SET);
                 ret = 0;
             }
+            printf("Starting at %lu\n", picoquic_current_time());
         }
     }
 

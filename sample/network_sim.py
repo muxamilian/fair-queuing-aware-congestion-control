@@ -55,12 +55,12 @@ class Opts:
     pass
 
 iperf = False
-max_time = 20
+max_time = 30
 congestion_control = "tonopah"
 
 def generate_tc_commands(if_name, with_delay=False):
     opt = Opts()
-    opt.delay = 50
+    opt.delay = 100
     opt.rate = 20
     bdp = (opt.delay/1000 * opt.rate*1000000)/(1500*8)
     if with_delay:
@@ -69,8 +69,10 @@ def generate_tc_commands(if_name, with_delay=False):
     # opt.buffer_size = int(1. * math.ceil(bdp))
     # opt.buffer_size = 10
     # opt.qdisc = 'fq'
-    opt.qdisc = 'fq_codel'
-    # opt.qdisc = 'pfifo'
+    # opt.qdisc = 'fq_codel'
+    opt.qdisc = 'pfifo'
+    if opt.qdisc == 'pfifo' or opt.qdisc == 'fq':
+        opt.buffer_size = bdp
     opt.interface = if_name
 
     qdisc_string = opt.qdisc
@@ -78,11 +80,13 @@ def generate_tc_commands(if_name, with_delay=False):
         if opt.qdisc == 'pfifo':
             qdisc_string = f"{opt.qdisc}"
             if opt.buffer_size is not None: 
-                 qdisc_string += f" limit {int(math.ceil(opt.buffer_size/2))}"
+                #  qdisc_string += f" limit {int(math.ceil(opt.buffer_size/2))}"
+                 qdisc_string += f" limit {opt.buffer_size}"
         elif opt.qdisc == 'fq':
             qdisc_string = f"{opt.qdisc} nopacing"
             if opt.buffer_size is not None: 
-                 qdisc_string += f" flow_limit {int(math.ceil(opt.buffer_size/2))}"
+                #  qdisc_string += f" flow_limit {int(math.ceil(opt.buffer_size/2))}"
+                 qdisc_string += f" flow_limit {opt.buffer_size}"
 
     else:
         qdisc_string = opt.qdisc

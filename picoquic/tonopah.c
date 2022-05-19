@@ -116,12 +116,13 @@ static void picoquic_tonopah_sim_enter_recovery(
     picoquic_congestion_notification_t notification,
     uint64_t current_time)
 {
+    // printf("In recovery, state: %d\n", nr_state->alg_state);
     if (nr_state->alg_state == picoquic_tonopah_alg_congestion_avoidance && get_interval_info_list_len(interval_list_first) == 0) {
         puts("Tonopah: Packet lost but ignoring it");
         return;
     }
     if (path1 != NULL && path2 != NULL) {
-        printf("Recovery: ");
+        printf("Recovery at %lu: ", picoquic_current_time());
         delete_info_list();
     }
     nr_state->ssthresh = nr_state->cwin / 2;
@@ -338,8 +339,12 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
     //     ratio_used = 0.5;
     // }
 
-    if (cnx->nb_paths == 2) {
+    if (cnx->nb_paths == 2 && path1 != NULL && path2 != NULL) {
+        // uint64_t current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
+        // uint64_t current_smoothed_rtt = MAX((cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2, 50000);
         uint64_t current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
+        current_smoothed_rtt = MIN(current_smoothed_rtt, 50000ull);
+        // printf("rtt: %lu\n", current_smoothed_rtt);
         uint64_t current_time = picoquic_current_time();
 
         if (last_change + current_smoothed_rtt < current_time) {
@@ -359,7 +364,11 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
                 // puts("Detected fq, lowering cw");
                 nr_state->ssthresh = (uint64_t) (((double) nr_state->cwin) * (7./8.));
                 nr_state->cwin = nr_state->ssthresh;
-                printf("FQ detected: ");
+                printf("FQ detected at %lu: ", picoquic_current_time());
+                delete_info_list();
+            }
+            if (nr_state->alg_state != picoquic_tonopah_alg_congestion_avoidance) {
+                printf("Not in congestion avoidance: %d; ", nr_state->alg_state);
                 delete_info_list();
             }
             picoquic_tonopah_interval_info_t* new_interval = (picoquic_tonopah_interval_info_t*) malloc(sizeof(picoquic_tonopah_interval_info_t));
@@ -400,11 +409,6 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
             cnx->path[1]->cwin = dominant_cwin;
             cnx->path[0]->cwin = submissive_cwin;
         }
-
-        // else {
-        //     puts("Two paths but path I got is neither of the first two");
-        //     abort();
-        // }
     }
 }
 
