@@ -816,9 +816,16 @@ namespace UnitTest1
             Assert::AreEqual(ret, 0);
         }
 
-        TEST_METHOD(test_stop_sending)
+        TEST_METHOD(stop_sending)
         {
             int ret = stop_sending_test();
+
+            Assert::AreEqual(ret, 0);
+        }
+
+        TEST_METHOD(discard_stream)
+        {
+            int ret = discard_stream_test();
 
             Assert::AreEqual(ret, 0);
         }
@@ -1970,6 +1977,12 @@ namespace UnitTest1
 
         TEST_METHOD(h3zero_user_agent) {
             int ret = h3zero_user_agent_test();
+
+            Assert::AreEqual(ret, 0);
+        }
+
+        TEST_METHOD(h3zero_null_sni) {
+            int ret = h3zero_null_sni_test();
 
             Assert::AreEqual(ret, 0);
         }
