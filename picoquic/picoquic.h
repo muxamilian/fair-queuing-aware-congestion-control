@@ -40,6 +40,8 @@
 extern "C" {
 #endif
 
+#define PICOQUIC_VERSION "1.01a"
+
 #define PICOQUIC_ERROR_CLASS 0x400
 #define PICOQUIC_ERROR_DUPLICATE (PICOQUIC_ERROR_CLASS + 1)
 #define PICOQUIC_ERROR_AEAD_CHECK (PICOQUIC_ERROR_CLASS + 3)
@@ -958,6 +960,11 @@ uint64_t picoquic_get_next_local_stream_id(picoquic_cnx_t* cnx, int is_unidir);
  * to reset that stream when receiving the "stop sending" signal. */
 int picoquic_stop_sending(picoquic_cnx_t* cnx,
     uint64_t stream_id, uint16_t local_stream_error);
+
+/* Discard stream. This is equivalent to sending a stream reset
+ * and a stop sending request, and also setting the app context
+ * of the stream to NULL */
+int picoquic_discard_stream(picoquic_cnx_t* cnx, uint64_t stream_id, uint16_t local_stream_error);
 
 /* The function picoquic_set_datagram_ready indicates to the stack
  * whether the application is ready to send datagrams. */

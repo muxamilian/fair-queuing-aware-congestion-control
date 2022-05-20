@@ -970,7 +970,7 @@ int h3zero_user_agent_test_one(int test_mode, char const * ua_string, uint8_t * 
     switch (test_mode) {
     case 0:
         bytes = h3zero_create_request_header_frame_ex(buffer, bytes_max,
-            "/", 1, "example.com", ua_string);
+            (uint8_t*)"/", 1, "example.com", ua_string);
         break;
     case 1:
         bytes = h3zero_create_post_header_frame_ex(buffer, bytes_max,
@@ -1023,6 +1023,29 @@ int h3zero_user_agent_test()
     return ret;
 }
 
+int h3zero_null_sni_test()
+{
+    int ret = 0;
+    int hret;
+    uint8_t buffer[256];
+    size_t consumed = 0;
+    
+    hret = h3zero_client_create_stream_request(buffer, 256,
+        (uint8_t const *)"/", 1, 0, NULL, &consumed);
+    if (hret == 0) {
+        DBG_PRINTF("%s", "Unexpected success, create request header with NULL host");
+            ret = -1;
+    }
+    else {
+        hret = h3zero_client_create_stream_request(buffer, 256,
+            (uint8_t const*)"/", 1, 0, NULL, &consumed);
+        if (hret == 0) {
+            DBG_PRINTF("%s", "Unexpected success, create post header with NULL host");
+            ret = -1;
+        }
+    }
+    return ret;
+}
 
 /* Fuzz test of the qpack parser.
  * Start from valid frames, stick several of them in a buffer,
@@ -2027,6 +2050,7 @@ int demo_file_access_test()
     char buf[128];
     char* file_path;
     const int nb_blocks = 16;
+    int file_error = 0;
 
     FILE* F = picoquic_file_open(path + 1, "wb");
 
@@ -2045,9 +2069,9 @@ int demo_file_access_test()
 
     if (ret == 0) {
         ret = demo_server_try_file_path((uint8_t*)path, strlen(path), &echo_size,
-            &file_path, folder);
+            &file_path, folder, &file_error);
         if (ret != 0) {
-            DBG_PRINTF("Could not try file path <%s> <%s>, ret = %d", folder, path, ret);
+            DBG_PRINTF("Could not try file path <%s> <%s>, ret = %d, err = 0x%x", folder, path, ret, file_error);
         }
         else if (echo_size != f_size) {
             DBG_PRINTF("Found size = %d instead of %d", (int)echo_size, (int)f_size);
@@ -2094,7 +2118,7 @@ int demo_file_access_test()
     }
 
     if (ret == 0) {
-        if (demo_server_try_file_path((uint8_t*)path, strlen(path), &echo_size, &file_path, folder) == 0) {
+        if (demo_server_try_file_path((uint8_t*)path, strlen(path), &echo_size, &file_path, folder, &file_error) == 0) {
             DBG_PRINTF("Could open deleted file path <%s> <%s>", folder, path);
             ret = -1;
         }
@@ -2106,8 +2130,8 @@ int demo_file_access_test()
 
     if (ret == 0) {
         if (demo_server_try_file_path((uint8_t*)bad_path, strlen(bad_path), &echo_size,
-            &file_path, folder) == 0) {
-            DBG_PRINTF("Could open deleted bad path <%s> <%s>", folder, bad_path);
+            &file_path, folder, &file_error) == 0) {
+            DBG_PRINTF("Could open bad path <%s> <%s>", folder, bad_path);
             ret = -1;
         }
         if (file_path != NULL) {
