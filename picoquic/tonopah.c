@@ -62,6 +62,7 @@ uint64_t last_change = 0;
 // double ratio = 9./16.;
 double ratio = 0.5625;
 
+picoquic_cnx_t * last_cnx = NULL;
 picoquic_path_t* path1 = NULL;
 picoquic_path_t* path2 = NULL;
 picoquic_path_t* dominant_path = NULL;
@@ -122,7 +123,7 @@ static void picoquic_tonopah_sim_enter_recovery(
         return;
     }
     if (path1 != NULL && path2 != NULL) {
-        printf("Recovery at %lu: ", picoquic_current_time());
+        printf("Tonopah: Recovery at %lu: ", picoquic_current_time());
         delete_info_list();
     }
     nr_state->ssthresh = nr_state->cwin / 2;
@@ -297,8 +298,11 @@ int aggregate_intervals(picoquic_tonopah_interval_info_t* list) {
     uint64_t acc_time_diffs_submissive = 0;
     uint64_t acc_bytes_dominant = 0;
     uint64_t acc_bytes_submissive = 0;
+    // uint64_t current_smoothed_rtt = (last_cnx->path[0]->smoothed_rtt + last_cnx->path[1]->smoothed_rtt)/2;
+    // uint64_t should_be_finished_time = picoquic_current_time() - current_smoothed_rtt;
     while (current_elem != NULL) {
         if (current_elem->finished1 && current_elem->finished2) {
+                // && current_elem->last_ack_time1 <= should_be_finished_time && current_elem->last_ack_time2 <= should_be_finished_time) {
             len += 1;
             assert(current_elem->dominant_path_id == 1 || current_elem->dominant_path_id == 2);
             if (current_elem->dominant_path_id == 1) {
@@ -342,8 +346,11 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
     if (cnx->nb_paths == 2 && path1 != NULL && path2 != NULL) {
         // uint64_t current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
         // uint64_t current_smoothed_rtt = MAX((cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2, 50000);
+
         uint64_t current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
         current_smoothed_rtt = MIN(current_smoothed_rtt, 50000ull);
+        // uint64_t current_smoothed_rtt = 50000ull;
+
         // printf("rtt: %lu\n", current_smoothed_rtt);
         uint64_t current_time = picoquic_current_time();
 
@@ -364,7 +371,7 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
                 // puts("Detected fq, lowering cw");
                 nr_state->ssthresh = (uint64_t) (((double) nr_state->cwin) * (7./8.));
                 nr_state->cwin = nr_state->ssthresh;
-                printf("FQ detected at %lu: ", picoquic_current_time());
+                printf("Tonopah: FQ detected at %lu: ", picoquic_current_time());
                 delete_info_list();
             }
             if (nr_state->alg_state != picoquic_tonopah_alg_congestion_avoidance) {
@@ -423,18 +430,30 @@ picoquic_tonopah_interval_info_t* find_right_interval(picoquic_cnx_t* cnx, picoq
             if (current_elem->prev != NULL) {
                 if (path_id == 1 && !current_elem->prev->finished1) {
                     current_elem->prev->finished1 = 1;
-                    assert(current_elem->prev->first_ack_time1 != 0);
-                    assert(current_elem->prev->last_ack_time1 != 0);
-                    assert(current_elem->prev->bytes_received1 != 0);
-                    assert(current_elem->prev->first_seq_num1 != 0);
+                    if ((current_elem->prev->first_ack_time1 == 0)
+                    || (current_elem->prev->last_ack_time1 == 0)
+                    || (current_elem->prev->bytes_received1 == 0)
+                    || (current_elem->prev->first_seq_num1 == 0)) {
+                        current_elem->prev->finished1 = 0;
+                    }
+                    // assert(current_elem->prev->first_ack_time1 != 0);
+                    // assert(current_elem->prev->last_ack_time1 != 0);
+                    // assert(current_elem->prev->bytes_received1 != 0);
+                    // assert(current_elem->prev->first_seq_num1 != 0);
                     // double bw = ((double) (current_elem->prev->bytes_received1*8)) / (current_elem->prev->last_ack_time1 - current_elem->prev->first_ack_time1) * 1000000.;
                     // printf("Finished interval1, bw: %f\n", bw);                    
                 } else if (path_id == 2 && !current_elem->prev->finished2) {
                     current_elem->prev->finished2 = 1;
-                    assert(current_elem->prev->first_ack_time2 != 0);
-                    assert(current_elem->prev->last_ack_time2 != 0);
-                    assert(current_elem->prev->bytes_received2 != 0);
-                    assert(current_elem->prev->first_seq_num2 != 0);
+                    if ((current_elem->prev->first_ack_time2 == 0)
+                    || (current_elem->prev->last_ack_time2 == 0)
+                    || (current_elem->prev->bytes_received2 == 0)
+                    || (current_elem->prev->first_seq_num2 == 0)) {
+                        current_elem->prev->finished2 = 0;
+                    }
+                    // assert(current_elem->prev->first_ack_time2 != 0);
+                    // assert(current_elem->prev->last_ack_time2 != 0);
+                    // assert(current_elem->prev->bytes_received2 != 0);
+                    // assert(current_elem->prev->first_seq_num2 != 0);
                     // double bw = ((double) (current_elem->prev->bytes_received2*8)) / (current_elem->prev->last_ack_time2 - current_elem->prev->first_ack_time2) * 1000000.;
                     // printf("Finished interval2, bw: %f\n", bw);
                 }
@@ -445,8 +464,6 @@ picoquic_tonopah_interval_info_t* find_right_interval(picoquic_cnx_t* cnx, picoq
     }
     return NULL;
 }
-
-picoquic_cnx_t * last_cnx = NULL;
 
 /*
  * Properly implementing New Reno requires managing a number of
@@ -608,6 +625,7 @@ static void picoquic_tonopah_delete(picoquic_path_t* path_x)
 {
     if (last_cnx != NULL) {
         in_port_t s_port = ((struct sockaddr_in*) &(last_cnx->path[0]->local_addr))->sin_port;
+        printf("Tonopah: Ending at %lu\n", picoquic_current_time());
         printf("src_port: %hu, selected1: %d; congested1: %d, paced1: %d, selected2: %d, congested2: %d, paced2: %d\n", s_port, 
             last_cnx->path[0]->selected, last_cnx->path[0]->congested, last_cnx->path[0]->paced, 
             last_cnx->path[1]->selected, last_cnx->path[1]->congested, last_cnx->path[1]->paced);

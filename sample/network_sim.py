@@ -9,8 +9,8 @@ import mininet.cli
 import mininet.clean
 import time
 import os
-import math
 import subprocess
+import re
 
 mininet.clean.cleanup()
 subprocess.run('killall picoquic_sample'.split(' '))
@@ -57,10 +57,14 @@ class Opts:
 iperf = False
 max_time = 30
 congestion_control = "tonopah"
+# qdisc = 'pfifo'
+# qdisc = 'fq'
+qdisc = 'fq_codel'
+
 
 def generate_tc_commands(if_name, with_delay=False):
     opt = Opts()
-    opt.delay = 100
+    opt.delay = 20
     opt.rate = 20
     bdp = (opt.delay/1000 * opt.rate*1000000)/(1500*8)
     if with_delay:
@@ -68,9 +72,7 @@ def generate_tc_commands(if_name, with_delay=False):
     opt.buffer_size = None
     # opt.buffer_size = int(1. * math.ceil(bdp))
     # opt.buffer_size = 10
-    # opt.qdisc = 'fq'
-    # opt.qdisc = 'fq_codel'
-    opt.qdisc = 'pfifo'
+    opt.qdisc = qdisc
     if opt.qdisc == 'pfifo' or opt.qdisc == 'fq':
         opt.buffer_size = bdp
     opt.interface = if_name
@@ -81,15 +83,15 @@ def generate_tc_commands(if_name, with_delay=False):
             qdisc_string = f"{opt.qdisc}"
             if opt.buffer_size is not None: 
                 #  qdisc_string += f" limit {int(math.ceil(opt.buffer_size/2))}"
-                 qdisc_string += f" limit {opt.buffer_size}"
+                 qdisc_string += f" limit {int(opt.buffer_size)}"
         elif opt.qdisc == 'fq':
             qdisc_string = f"{opt.qdisc} nopacing"
             if opt.buffer_size is not None: 
                 #  qdisc_string += f" flow_limit {int(math.ceil(opt.buffer_size/2))}"
-                 qdisc_string += f" flow_limit {opt.buffer_size}"
+                 qdisc_string += f" flow_limit {int(opt.buffer_size)}"
 
     else:
-        qdisc_string = opt.qdisc
+        qdisc_string = 'pfifo'
 
     strings = (
         f"tc qdisc del dev {opt.interface} root", 
@@ -119,7 +121,8 @@ print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 # net.stop()
 # quit()
 
-debug = {"stdout": None, "stderr": None}
+# debug = {"stdout": None, "stderr": None}
+debug = {}
 os.environ["MAX_TIME"] = str(max_time)
 os.environ["CONGESTION_CONTROL"] = congestion_control
 
@@ -181,7 +184,8 @@ if err:
 server_popen.terminate()
 out, err = server_popen.communicate()
 if out:
-    print("server out", out.decode("utf-8"))
+    server_out = out.decode("utf-8")
+    print("server out", server_out)
 if err:
     print("server err", err.decode("utf-8"))
 
@@ -193,6 +197,30 @@ if os.path.isfile("client.qlog"):
     os.remove("client.qlog")
 os.symlink(most_recent_file, "client.qlog")
 
-mininet.cli.CLI(net)
+info = []
+for line in server_out.split("\n"):
+    m = re.search("Tonopah: (Ending|Recovery|FQ detected) at ([0-9]+)", line)
+    if m:
+        if len(info) > 0 and info[-1][-1] == None:
+            break
+        ts = int(m.groups()[1])/1000000.
+        if 'FQ' in m.groups()[0]:
+            value = True
+        elif 'Recovery' in m.groups()[0]:
+            value = False
+        else:
+            value = None
+        info.append((ts, value))
+print("info", info)
+correct_duration = 0.0
+for i in range(len(info)-2):
+    assert info[i+1][1] is not None
+    if info[i+1][1] == ('fq' in qdisc):
+        correct_duration += (info[i+1][0] - info[i][0])
+
+duration = info[-2][0] - info[0][0]
+print("duration", duration, 'correct', correct_duration/duration)
+
+# mininet.cli.CLI(net)
 net.stop()
 

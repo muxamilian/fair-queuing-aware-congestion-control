@@ -327,7 +327,7 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 uint64_t current_time = (uint64_t) time(NULL);
                 if (end_time > 0 && current_time >= end_time) {
                     ret = picoquic_close(cnx, 0);
-                    puts("Reached end time");
+                    // puts("Reached end time");
                 }
 
                 if (ret == 0 && length > 0) {
@@ -383,7 +383,7 @@ int sample_client_callback(picoquic_cnx_t* cnx,
         case picoquic_callback_stateless_reset:
         case picoquic_callback_close: /* Received connection close */
         case picoquic_callback_application_close: /* Received application close */
-            fprintf(stdout, "Connection closed at %lu.\n", picoquic_current_time());
+            fprintf(stdout, "Tonopah: Connection closed at %lu.\n", picoquic_current_time());
             /* Mark the connection as completed */
             client_ctx->is_disconnected = 1;
             /* Remove the application callback */
@@ -511,6 +511,7 @@ static int sample_client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_
 int picoquic_sample_client(char const * server_name, int server_port, char const * default_dir,
     int nb_files, char const ** file_names)
 {
+    setbuf(stdout, NULL);
     int ret = 0;
     struct sockaddr_storage server_address;
     char const* sni = PICOQUIC_SAMPLE_SNI;
