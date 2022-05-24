@@ -2279,8 +2279,8 @@ void picoquic_compute_ack_gap_and_delay(picoquic_cnx_t* cnx, uint64_t rtt, uint6
     if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
         *ack_gap = 1;
         *ack_delay_max = 10000ull;
+        return;
     }
-    return;
     
     uint64_t return_data_rate = 0;
     uint64_t nb_packets = picoquic_compute_packets_in_window(cnx, data_rate);

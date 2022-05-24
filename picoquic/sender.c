@@ -918,7 +918,8 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t * path_x, 
 {
     uint64_t rtt_nanosec = path_x->smoothed_rtt * 1000;
 
-    if ((path_x->cwin < ((uint64_t)path_x->send_mtu) * 8) || rtt_nanosec <= 1000) {
+    if (!(cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) && 
+            ((path_x->cwin < ((uint64_t)path_x->send_mtu) * 8) || rtt_nanosec <= 1000)) {
         /* Small windows, should only relie on ACK clocking */
         path_x->pacing_bucket_max = rtt_nanosec;
         path_x->pacing_packet_time_nanosec = 1;
@@ -932,9 +933,9 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t * path_x, 
         double pacing_rate = ((double)path_x->cwin / (double)rtt_nanosec) * 1000000000.0;
         uint64_t quantum = path_x->cwin / 4;
         
-        if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
-            quantum = (cnx->path[0]->cwin + cnx->path[1]->cwin) / 2 / 4;
-        }
+        // if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+        //     quantum = (cnx->path[0]->cwin + cnx->path[1]->cwin) / 2 / 4;
+        // }
 
         if (quantum < 2ull * path_x->send_mtu) {
             quantum = 2ull * path_x->send_mtu;
@@ -955,11 +956,10 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t * path_x, 
             else if (quantum > 16ull * path_x->send_mtu) {
                 quantum = 16ull * path_x->send_mtu;
             } 
-            if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2 && 
-                quantum > 2ull * path_x->send_mtu) {
-                quantum = 2ull * path_x->send_mtu;
-            }
-
+            // if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2 && 
+            //     quantum > 2ull * path_x->send_mtu) {
+            //     quantum = 2ull * path_x->send_mtu;
+            // }
         }
 
         if (slow_start) {
@@ -4694,6 +4694,7 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
             *if_index = cnx->path[path_id]->if_index_dest;
         }
 
+        // printf("cnx->path[path_id]->send_mtu: %lu\n", cnx->path[path_id]->send_mtu);
         /* Send the available packets */
         if (send_msg_size != NULL) {
             *send_msg_size = cnx->path[path_id]->send_mtu;
