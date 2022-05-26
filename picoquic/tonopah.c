@@ -51,6 +51,7 @@ typedef struct st_picoquic_tonopah_interval_info_t {
 
 #define INTERVALS_REQUIRED 4
 uint64_t minimum_interval = 50000;
+uint64_t maximum_interval = 100000;
 
 picoquic_tonopah_interval_info_t* interval_list_first = NULL;
 picoquic_tonopah_interval_info_t* interval_list_last = NULL;
@@ -310,6 +311,8 @@ int aggregate_intervals(picoquic_tonopah_interval_info_t* list) {
     uint64_t acc_time_diffs_submissive = 0;
     uint64_t acc_bytes_dominant = 0;
     uint64_t acc_bytes_submissive = 0;
+    uint64_t sent_bytes_dominant = 0;
+    uint64_t sent_bytes_submissive = 0;
     // uint64_t current_smoothed_rtt = (last_cnx->path[0]->smoothed_rtt + last_cnx->path[1]->smoothed_rtt)/2;
     // uint64_t should_be_finished_time = picoquic_current_time() - current_smoothed_rtt;
     while (current_elem != NULL) {
@@ -322,23 +325,31 @@ int aggregate_intervals(picoquic_tonopah_interval_info_t* list) {
                 acc_time_diffs_submissive += (current_elem->last_ack_time2 - current_elem->first_ack_time2);
                 acc_bytes_dominant += current_elem->bytes_received1;
                 acc_bytes_submissive += current_elem->bytes_received2;
+                sent_bytes_dominant += current_elem->next->first_seq_num1 - current_elem->first_seq_num1;
+                sent_bytes_submissive += current_elem->next->first_seq_num2 - current_elem->first_seq_num2;
             } else {
                 acc_time_diffs_dominant += (current_elem->last_ack_time2 - current_elem->first_ack_time2);
                 acc_time_diffs_submissive += (current_elem->last_ack_time1 - current_elem->first_ack_time1);
                 acc_bytes_dominant += current_elem->bytes_received2;
                 acc_bytes_submissive += current_elem->bytes_received1;
+                sent_bytes_dominant += current_elem->next->first_seq_num2 - current_elem->first_seq_num2;
+                sent_bytes_submissive += current_elem->next->first_seq_num1 - current_elem->first_seq_num1;
             }
         } else {
             acc_time_diffs_dominant = 0;
             acc_time_diffs_submissive = 0;
             acc_bytes_dominant = 0;
             acc_bytes_submissive = 0;
+            sent_bytes_dominant = 0;
+            sent_bytes_submissive = 0;
             len = 0;
         }
         if (len == INTERVALS_REQUIRED) {
             double bw_dominant = ((double) (acc_bytes_dominant*8)) / acc_time_diffs_dominant * 1000000. / 1000000;
             double bw_submissive = ((double) (acc_bytes_submissive*8)) / acc_time_diffs_submissive * 1000000. / 1000000;
             double observed_ratio = bw_dominant / (bw_dominant + bw_submissive);
+
+            double bw_sent_ratio = ((double) (sent_bytes_dominant))/((double) (sent_bytes_submissive) + (double) (sent_bytes_dominant));
             // uint64_t current_smoothed_rtt = (last_cnx->path[0]->smoothed_rtt + last_cnx->path[1]->smoothed_rtt)/2;
             double multiplier = 0.5;
             // if (current_smoothed_rtt < minimum_interval) {
@@ -346,8 +357,11 @@ int aggregate_intervals(picoquic_tonopah_interval_info_t* list) {
             // } else {
             //     multiplier = 0.67;
             // }
-            int detected_fq = observed_ratio < 0.5 + multiplier * (ratio-0.5);
-            // printf("detected_fq: %d, bw_dominant: %.2f, bw_submissive: %.2f, ratio: %.3f\n", detected_fq, bw_dominant, bw_submissive, observed_ratio);  
+            // int sent_enough = bw_sent_ratio < 0.5 + 0.75 * (bw_sent_ratio-0.5);
+            int detected_fq = (observed_ratio < 0.5 + multiplier * (bw_sent_ratio-0.5));
+            // int detected_fq = (observed_ratio-0.5)/(bw_sent_ratio-0.5) < 0.5;
+
+            // printf("detected_fq: %d, bw_dominant: %.2f, bw_submissive: %.2f, ratio: %.3f, ratio_sent: %.3f\n", detected_fq, bw_dominant, bw_submissive, observed_ratio, bw_sent_ratio);  
             return detected_fq;               
         }
         current_elem = current_elem->prev;
@@ -361,7 +375,7 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
         uint64_t current_time = picoquic_current_time();
 
         uint64_t current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
-        if (last_change + MAX(minimum_interval, current_smoothed_rtt) < current_time) {
+        if (last_change + MIN(MAX(minimum_interval, current_smoothed_rtt), maximum_interval) < current_time) {
             if (dominant_path == path1) {
                 // printf("Changing dominant path to path1, last_change: %lu, current_time: %lu, srtt: %lu, sum: %lu\n", last_change, current_time, current_smoothed_rtt, last_change + current_smoothed_rtt);
                 dominant_path = path2;

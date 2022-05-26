@@ -68,11 +68,11 @@ congestion_control = "tonopah"
 results = []
 i = -1
 
-# for delay in (100,):
+# # for delay in (100,):
 for delay in (10, 50, 100):
     results.append([])
     for rate in (10, 50, 100):
-# for delay, rate in ((100, 50),):
+# for delay, rate in ((10, 10),):
     # for rate in (100,):
         i += 1
         # if i < 1: 
@@ -154,8 +154,10 @@ for delay in (10, 50, 100):
         os.environ["MAX_TIME"] = str(max_time)
         os.environ["CONGESTION_CONTROL"] = congestion_control
 
-        server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap (tcp || udp) and ip'.split(' '), **debug)
-        client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap (tcp || udp) and ip'.split(' '), **debug)
+        # server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap (tcp || udp) and ip'.split(' '), **debug)
+        # client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap (tcp || udp) and ip'.split(' '), **debug)
+        server_tcpdump_popen = h2.popen(f'cat'.split(' '), **debug)
+        client_tcpdump_popen = h1.popen(f'cat'.split(' '), **debug)
 
         # server_popen = h2.popen('iperf3 -s -1'.split(' '), **debug)
         # time.sleep(1)
@@ -252,6 +254,7 @@ for delay in (10, 50, 100):
         correct_rate = correct_duration/duration
         print("duration", duration, 'correct', correct_rate)
         results[-1].append(correct_rate)
+        time.sleep(5)
 
 print("results", results)
 
