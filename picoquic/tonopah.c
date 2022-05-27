@@ -44,6 +44,7 @@ typedef struct st_picoquic_tonopah_interval_info_t {
     uint64_t dominant_path_id; // can be 1 or 2;
     uint8_t finished1;
     uint8_t finished2;
+    uint8_t dont_use;
     
     struct st_picoquic_tonopah_interval_info_t* next;
     struct st_picoquic_tonopah_interval_info_t* prev;
@@ -357,8 +358,8 @@ int aggregate_intervals(picoquic_tonopah_interval_info_t* list) {
             // } else {
             //     multiplier = 0.67;
             // }
-            // int sent_enough = bw_sent_ratio < 0.5 + 0.75 * (bw_sent_ratio-0.5);
-            int detected_fq = (observed_ratio < 0.5 + multiplier * (bw_sent_ratio-0.5));
+            int sent_enough = bw_sent_ratio > 0.5 + 0.75 * (ratio-0.5);
+            int detected_fq = (observed_ratio < 0.5 + multiplier * (bw_sent_ratio-0.5)) && sent_enough;
             // int detected_fq = (observed_ratio-0.5)/(bw_sent_ratio-0.5) < 0.5;
 
             // printf("detected_fq: %d, bw_dominant: %.2f, bw_submissive: %.2f, ratio: %.3f, ratio_sent: %.3f\n", detected_fq, bw_dominant, bw_submissive, observed_ratio, bw_sent_ratio);  
@@ -409,6 +410,7 @@ static void set_path(picoquic_cnx_t* cnx, picoquic_tonopah_sim_state_t* nr_state
             new_interval->prev = prev_element;
             if (interval_list_first == NULL) {
                 interval_list_first = new_interval;
+                new_interval->dont_use = 1;
             }
             interval_list_last = new_interval;
             if (prev_element != NULL) {
@@ -454,7 +456,9 @@ picoquic_tonopah_interval_info_t* find_right_interval(picoquic_cnx_t* cnx, picoq
                     if ((current_elem->prev->first_ack_time1 == 0)
                     || (current_elem->prev->last_ack_time1 == 0)
                     || (current_elem->prev->bytes_received1 == 0)
-                    || (current_elem->prev->first_seq_num1 == 0)) {
+                    || (current_elem->prev->first_seq_num1 == 0)
+                    // || (current_elem->prev->dont_use)
+                    ) {
                         current_elem->prev->finished1 = 0;
                     }
                     // assert(current_elem->prev->first_ack_time1 != 0);
@@ -468,7 +472,9 @@ picoquic_tonopah_interval_info_t* find_right_interval(picoquic_cnx_t* cnx, picoq
                     if ((current_elem->prev->first_ack_time2 == 0)
                     || (current_elem->prev->last_ack_time2 == 0)
                     || (current_elem->prev->bytes_received2 == 0)
-                    || (current_elem->prev->first_seq_num2 == 0)) {
+                    || (current_elem->prev->first_seq_num2 == 0)
+                    // || (current_elem->prev->dont_use)
+                    ) {
                         current_elem->prev->finished2 = 0;
                     }
                     // assert(current_elem->prev->first_ack_time2 != 0);
