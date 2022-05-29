@@ -582,9 +582,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
                 picoquic_set_default_congestion_algorithm(quic, picoquic_newreno_algorithm);
             }
 
-            // picoquic_set_key_log_file_from_env(quic);
-            // picoquic_set_qlog(quic, qlog_dir);
-            // picoquic_set_log_level(quic, 1);
+            picoquic_set_key_log_file_from_env(quic);
+            picoquic_set_qlog(quic, qlog_dir);
+            picoquic_set_log_level(quic, 1);
         }
     }
 

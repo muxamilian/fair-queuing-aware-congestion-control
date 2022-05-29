@@ -8,6 +8,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{subfig}
 \begin{document}
 
 \title{Fair Queuing Aware Congestion Control}
@@ -26,7 +27,7 @@
 Fair queuing is becoming increasingly prevalent in the internet and has been shown to improve performance in many circumstances. 
 Performance could be improved even more if endpoints could detect the presence of fair queuing on a certain path and adjust their congestion control accordingly. 
 If fair queuing is detected, the congestion control would not have to take cross traffic into account, which allows for more flexibility. 
-In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path, while only adding small latency overhead and consuming no additional bandwidth. 
+In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path. 
 When fair queuing is detected, a different congestion control is chosen, which results in reduced latency. 
 Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
 \end{abstract}
@@ -36,32 +37,48 @@ Unlike an algorithm proposed in a previous paper of us, the approach presented h
 % \end{IEEEkeywords}
 
 \section{Introduction}
-This document is a model and instructions for \LaTeX.
-Please observe the conference page limits. 
 
-\section{Ease of Use}
+In our previous work we proposed a technique which determines the presence of fair queuing at flow startup \cite{bachl_detecting_2021}, which worked as follows: 
+If fair queuing is successfully detected at flow startup, a congestion control was used, which aimed to keep queuing delay low (delay-based congestion control). 
+While this delay-based congestion control achieved high throughput and low delay, it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,noauthor_cubic_nodate}, 
+similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}.
+This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus is only used if fair queuing is detected. 
+If it is detected that there is no fair queuing, our approach uses a more aggressive congestion control (specifically PCC \cite{dong_pcc_2015}), which can compete better with other network flows,
+but doesn't keep delay as low as our delay-based congestion control. 
 
-\subsection{Maintaining the Integrity of the Specifications}
+While our previous approach had high detection accuracy (98\%), it also had some limitations:
+\begin{itemize}
+    \item It would \textbf{only} detect fair queuing at \textbf{flow startup}. 
+    But if the bottleneck link changes during a flow, it could be that the previous bottleneck had fair queuing while the new one doesn't. This wouldn't have been detected. 
+    \item It would detect fair queuing only after filling the queue at the bottleneck completely, \textbf{causing packet loss}. 
+\end{itemize}
 
-The IEEEtran class file is used to format your paper and style the text. All margins, 
-column widths, line spaces, and text fonts are prescribed; please do not 
-alter them. You may note peculiarities. For example, the head margin
-measures proportionately more than is customary. This measurement 
-and others are deliberate, using specifications that anticipate your paper 
-as one part of the entire proceedings, and not as an independent document. 
-Please do not revise any of the current designations.
+We would thus like to have an approach which 
+\begin{itemize}
+    \item \textbf{continuously checks} for the presence or absence of fair queuing, not only at flow startup. 
+    \item \textbf{doesn't cause packet loss} while trying to determine if there is fair queuing or not. 
+    \item can be \textbf{transparently used} on top of any congestion control algorithm. 
+\end{itemize} 
 
-For papers published in translation journals, please give the English 
-citation first, followed by the original foreign-language citation \cite{b6}.
+\section{Concept}
 
-\begin{thebibliography}{00}
-\bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
-\bibitem{b2} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
-\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
-\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
-\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
-\bibitem{b6} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
-\bibitem{b7} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
-\end{thebibliography}
+% \begin{figure}
+% \centering
+% \subfloat[\footnotesize Sending rate]{\includegraphics[width=0.33\columnwidth]{{"figures/fq_illustration_throughput"}.pdf}
+% \label{fig:throughput}}
+% \subfloat[\footnotesize Receiving rate\\(no fair queuing)]{\includegraphics[width=0.33\columnwidth]{{"figures/fq_illustration_goodput_no_fq"}.pdf}
+% \label{fig:goodput_no_fq}}
+% \subfloat[\footnotesize Receiving rate\\(fair queuing)]{\includegraphics[width=0.33\columnwidth]{{"figures/fq_illustration_goodput_fq"}.pdf}
+% \label{fig:goodput_fq}}
+% \caption{An example illustrating our proposed flow startup mechanism. Figure \ref{fig:throughput} shows the sending rate, \ref{fig:goodput_no_fq} the receiving rate in case there's no fair queuing and \ref{fig:goodput_fq} the receiving rate if there is fair queuing.}
+% \label{fig:illustration}
+% \end{figure}
+
+\section{Evaluation}
+
+\section{Discussion}
+
+\bibliographystyle{ieeetr}
+\bibliography{fair-queuing-aware-congestion-control}
 
 \end{document}

@@ -59,15 +59,15 @@ class Opts:
     pass
 
 iperf = False
-max_time = 90
+max_time = 30
 congestion_control = "tonopah"
 
 results = []
 
-# # for delay in (100,):
-for delay in (10, 50, 100):
+# for delay in (10, 50, 100):
+for delay in (50, 50, 100):
     results.append([])
-    for rate in (10, 50, 100):
+    for rate in (50, 50, 100):
         results[-1].append([])
         rep_counter = 0
         while True:
@@ -152,20 +152,21 @@ for delay in (10, 50, 100):
             os.environ["MAX_TIME"] = str(max_time)
             os.environ["CONGESTION_CONTROL"] = congestion_control
 
-            # server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap (tcp || udp) and ip'.split(' '), **debug)
-            # client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap (tcp || udp) and ip'.split(' '), **debug)
-            server_tcpdump_popen = h2.popen(f'cat'.split(' '), **debug)
-            client_tcpdump_popen = h1.popen(f'cat'.split(' '), **debug)
+            server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w server.pcap (tcp || udp) and ip'.split(' '), **debug)
+            client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w client.pcap (tcp || udp) and ip'.split(' '), **debug)
+            # server_tcpdump_popen = h2.popen(f'cat'.split(' '), **debug)
+            # client_tcpdump_popen = h1.popen(f'cat'.split(' '), **debug)
 
             # server_popen = h2.popen('iperf3 -s -1'.split(' '), **debug)
             # time.sleep(1)
             # client_popen = h1.popen(f'iperf3 -c {h2.IP()}'.split(' '), **debug)
             server_popen = h2.popen(f'../picoquic_sample server 4433 ./ca-cert.pem ./server-key.pem ./server_files'.split(' '), **debug)
             if iperf:
-                iperf_server_popen = h1.popen(f'iperf3 -s'.split(' '), **debug)
+                iperf_server_popen = h1.popen(f'iperf3 -s'.split(' '), **{"stdout": None, "stderr": None})
             time.sleep(1)
             if iperf:
-                iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **debug)
+                iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **{"stdout": None, "stderr": None})
+                time.sleep(4)
             # client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), env={'END_TIME': "10"}, **debug)
             client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), **{"stdout": None, "stderr": None})
 
@@ -223,8 +224,10 @@ for delay in (10, 50, 100):
             if len(files) > 0:
                 most_recent_file = files[-1]
 
-                if os.path.isfile("client.qlog"):
+                try:
                     os.remove("client.qlog")
+                except FileNotFoundError:
+                    pass
                 os.symlink(most_recent_file, "client.qlog")
 
             info = []
@@ -256,7 +259,7 @@ for delay in (10, 50, 100):
             print("duration", duration, 'correct', correct_rate)
             results[-1][-1].append(correct_rate)
             rep_counter += 1
-            # quit()
+            quit()
             # time.sleep(5)
 
 print("results", results)
