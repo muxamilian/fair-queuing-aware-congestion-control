@@ -27,14 +27,19 @@ all_as_arrays = [np.array(item) for item in zip(*all_lines)]
 x = all_as_arrays[0]
 ys = all_as_arrays[1:]
 
+print("default size:", plt.rcParamsDefault["figure.figsize"])
+plt.figure(figsize=(6.4, 4.8*0.67))
+
+labels = ['total', 'subflow 1', 'subflow 2']
 for i, y in enumerate(ys):
 	print("sum:", np.sum(y) / 1_000_000 * 8)
 	y = y / interval_len / 1_000_000 * 8
-	plt.plot(x, y, alpha=0.67)
+	plt.plot(x, y, alpha=0.67, label=labels[i])
 
 plt.xlabel("Time (s)")
 plt.ylabel("Throughput (Mbit/s)")
 plt.ylim(bottom=0)
+plt.legend(loc="lower right")
 plt.tight_layout()
 plt.savefig("plots/bw.pdf", bbox_inches = 'tight', pad_inches = 0)
 plt.show()

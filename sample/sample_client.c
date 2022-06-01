@@ -578,6 +578,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
             if (congestion_control != NULL && strcmp(congestion_control, "tonopah") == 0) {
                 picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm); 
             }
+            else if (congestion_control != NULL && strcmp(congestion_control, "bbr") == 0) {
+                picoquic_set_default_congestion_algorithm(quic, picoquic_bbr_algorithm); 
+            }
             else {
                 picoquic_set_default_congestion_algorithm(quic, picoquic_newreno_algorithm);
             }

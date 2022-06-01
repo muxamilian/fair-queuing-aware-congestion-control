@@ -9,6 +9,7 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{subfig}
+\usepackage{tabularx}
 \begin{document}
 
 \title{Fair Queuing Aware Congestion Control}
@@ -35,6 +36,20 @@ Unlike an algorithm proposed in a previous paper of us, the approach presented h
 % \begin{IEEEkeywords}
 % component, formatting, style, styling, insert
 % \end{IEEEkeywords}
+
+\section{Background}
+
+When different applications send packets on the internet, one application can send more than the other and thus take unfairly take a larger share of bandwidth. 
+This can result in unfairness and bad user experience. Several different approaches have been proposed to address this \cite{brown_future_2020,ware_beyond_2019} : One is to make sure every network flow is ``well-behaved'' (also known as TCP friendly)
+Another one is to enforce fairness at switches and routers, called ``fair queuing'' or ``flow queuing'' \cite{nagle_packet_1985}. 
+
+While fair queuing was proposed decades ago, it only gained popularity in the last couple of years because of implementations in the Linux kernel \cite{dumazet_pkt_sched_2013,hoeiland-joergensen_flow_2018}. 
+Applications can benefit from increasing deployment of fair queuing: It makes sure that not the most aggressive one wins. 
+It would be even better if applications could know if the connection they're sending on is managed by fair queuing. Then they could be sure that the can use a common congestion control mechanism, while not bothering or being bothered by other network flows.
+We proposed the first such approach in previous work \cite{bachl_detecting_2021} but our previous approach had some shortcomings upon which we improve in this paper. 
+
+Our approach is a congestion control mechanism which also performs measurements to determine if there is fair queuing. 
+This approach of performing measurements in congestion control became popular in the last couple of years and was already followed by \cite{cardwell_bbr_2016,dong_pcc_2015,goyal_elasticity_2020,hayes_online_2020}.
 
 \section{Introduction}
 
@@ -74,7 +89,57 @@ We would thus like to have an approach which
 % \label{fig:illustration}
 % \end{figure}
 
+\begin{figure}
+\centering
+\subfloat[\footnotesize Sending rate at the sender (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_fq"}.pdf}
+\label{fig:sender}}\\
+\subfloat[\footnotesize Receiving rate at the receiver (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_fq"}.pdf}
+\label{fig:receiver}}
+\caption{Figure \ref{fig:sender} shows the sending rate, \ref{fig:receiver} the receiving rate in case there's fair queuing. 
+Around seconds 12 and 13.5, the sending rate reaches the maximum of the link -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the flow that is sending more. 
+Thus, in the lower figure, the dominant flow and the non-dominant flow achieve approx.~the same receiving rate even though the dominant flow sends more (dominant flow). This is the effect of fair queuing.}
+\label{fig:illustration_fq}
+\end{figure}
+
+\begin{figure}
+\centering
+\subfloat[\footnotesize Sending rate at the sender (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_pfifo"}.pdf}
+\label{fig:sender_pfifo}}\\
+\subfloat[\footnotesize Receiving rate at the receiver (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
+\label{fig:receiver_pfifo}}
+\caption{Figure \ref{fig:sender_pfifo} shows the sending rate, \ref{fig:receiver_pfifo} the receiving rate in case there's no fair queuing. 
+Even though the sender sends too much and a queue builds up, still the flow that sends more data also has a higher receiving rate. 
+This is in contrast to \autoref{fig:illustration_fq}, where both flows have the same receiving rate once there is congestion at the bottleneck, thanks to fair queuing.}
+\label{fig:illustration_no_fq}
+\end{figure}
+
 \section{Evaluation}
+
+\begin{table}
+\begin{tabularx}{\columnwidth}{| l | X | X | X |}
+\hline
+& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
+10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
+50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+\hline
+\end{tabularx}
+\caption{Detection accuracy in case there's \textbf{no fair queuing}. The average accuracy (true negative rate) is 100\%}
+\label{table:no_fq}
+\end{table}
+
+\begin{table}
+\begin{tabularx}{\columnwidth}{| l | X | X | X |}
+\hline
+& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
+10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 99\% \newline 3rd quart.: 100\%\\ \hline
+50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+\hline
+\end{tabularx}
+\caption{Detection accuracy in case there is \textbf{fair queuing}. The average accuracy (true positive rate) is 96\%}
+\label{table:fq}
+\end{table}    
 
 \section{Discussion}
 

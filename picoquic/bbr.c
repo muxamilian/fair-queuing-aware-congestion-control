@@ -754,6 +754,7 @@ void BBRExitStartupSeedBDP(picoquic_bbr_state_t* bbr_state, picoquic_path_t* pat
 
 void BBREnterProbeRTT(picoquic_bbr_state_t* bbr_state)
 {
+    // puts("ProbeRTT");
     bbr_state->state = picoquic_bbr_alg_probe_rtt;
     bbr_state->pacing_gain = 1.0;
     bbr_state->cwnd_gain = 1.0;
@@ -824,6 +825,7 @@ void BBRHandleProbeRTT(picoquic_bbr_state_t* bbr_state, picoquic_path_t * path_x
 
 void BBRCheckProbeRTT(picoquic_bbr_state_t* bbr_state, picoquic_path_t* path_x, uint64_t bytes_in_transit, uint64_t current_time)
 {
+    // printf("bbr_state->rt_prop_expired: %u\n", bbr_state->rt_prop_expired);
     if (bbr_state->state != picoquic_bbr_alg_probe_rtt &&
         bbr_state->rt_prop_expired &&
         !bbr_state->idle_restart) {

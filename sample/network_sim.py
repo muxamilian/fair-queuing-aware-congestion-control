@@ -60,7 +60,7 @@ class Opts:
 
 iperf = False
 max_time = 30
-congestion_control = "tonopah"
+congestion_control = "bbr"
 
 results = []
 
@@ -246,7 +246,7 @@ for delay in (50, 50, 100):
                     info.append((ts, value))
             print("info", info)
             correct_duration = 0.0
-            if len(info)-2 <= 0:
+            if len(info)-2 <= 0 and congestion_control == "tonopah":
                 print("Got too few results...")
                 continue
             for i in range(len(info)-2):
