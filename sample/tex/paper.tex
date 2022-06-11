@@ -10,6 +10,8 @@
 \usepackage{hyperref}
 \usepackage{subfig}
 \usepackage{tabularx}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\renewcommand{\thempfootnote}{\arabic{mpfootnote}}
 \begin{document}
 
 \title{Fair Queuing Aware Congestion Control}
@@ -55,7 +57,7 @@ This approach of performing measurements in congestion control became popular in
 
 In our previous work we proposed a technique which determines the presence of fair queuing at flow startup \cite{bachl_detecting_2021}, which worked as follows: 
 If fair queuing is successfully detected at flow startup, a congestion control was used, which aimed to keep queuing delay low (delay-based congestion control). 
-While this delay-based congestion control achieved high throughput and low delay, it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,noauthor_cubic_nodate}, 
+While this delay-based congestion control achieved high throughput and low delay, it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,ha_cubic_2008}, 
 similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}.
 This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus is only used if fair queuing is detected. 
 If it is detected that there is no fair queuing, our approach uses a more aggressive congestion control (specifically PCC \cite{dong_pcc_2015}), which can compete better with other network flows,
@@ -122,9 +124,8 @@ This is in contrast to \autoref{fig:illustration_fq}, where both flows have the 
 10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
 50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
 100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-\hline
 \end{tabularx}
-\caption{Detection accuracy in case there's \textbf{no fair queuing}. The average accuracy (true negative rate) is 100\%}
+\caption{Detection accuracy in case there's \textbf{no fair queuing}.  The overall median accuracy is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
 \label{table:no_fq}
 \end{table}
 
@@ -135,11 +136,68 @@ This is in contrast to \autoref{fig:illustration_fq}, where both flows have the 
 10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 99\% \newline 3rd quart.: 100\%\\ \hline
 50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
 100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-\hline
 \end{tabularx}
-\caption{Detection accuracy in case there is \textbf{fair queuing}. The average accuracy (true positive rate) is 96\%}
+\caption{Detection accuracy in case there is \textbf{fair queuing}.  The overall median accuracy is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
 \label{table:fq}
 \end{table}    
+
+\subsection{Throughput and delay of Tonopah}
+
+\begin{table}
+\begin{minipage}{\columnwidth}
+\centering
+\begin{tabular}{| r | r | r |}
+\hline
+& Link utilization & Queuing delay \\ \hline
+Newreno & 95.6\% & 10.5 ms \\ \hline
+Tonopah & 94.3\% & 33.6 ms \\ \hline
+% p-value\protect\footnote{Using Welch's t-test} & 0.86 & $1.9 \times 10^{-6}$ \\ \hline
+% $\frac{\text{Newreno}}{\text{Tonopah}}$ & 103\% & 321\% \\ \hline
+\end{tabular}
+\caption{Newreno's link utilization is 103\% Tonopah's. But the \textbf{queuing delay} of Newreno is \textbf{321\%} Tonopah's. This means that Tonopah can deliver the same throughput while cause a lot less queuing delay. The differences in the throughput of Newreno and Tonopah are not significant (p-value\protect\footnote{Using Welch's t-test} $> 0.05$) while the differences in \textbf{queuing delay} are \textbf{highly significant} (p-value $< 10^{-5}$).}
+\label{table:throughput_and_delay}
+\end{minipage}
+\end{table}    
+
+\subsection{Cross-traffic}
+
+\begin{table}
+\begin{tabularx}{\columnwidth}{| l | X | X | X |}
+\hline
+& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
+10ms & Median: 100\% \newline 1st quart.: 99\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 98\% \newline 3rd quart.: 99\%\\ \hline
+50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+100ms & Median: 100\% \newline 1st quart.: 98\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+\end{tabularx}
+\caption{Detection accuracy in case there's \textbf{no fair queuing} under the presence of \textbf{cross-traffic}. The overall median accuracy is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
+\label{table:no_fq_crosstraffic}
+\end{table}
+
+\begin{table}
+\begin{tabularx}{\columnwidth}{| l | X | X | X |}
+\hline
+& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
+10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
+50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
+\end{tabularx}
+\caption{Detection accuracy in case there is \textbf{fair queuing} under the presence of \textbf{cross-traffic}.  The overall median accuracy is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
+\label{table:fq_crosstraffic}
+\end{table}        
+
+\subsection{Other variants of fair queuing}
+
+\begin{table}
+\begin{tabularx}{\columnwidth}{| l | X | X | X |}
+\hline
+& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
+10ms & Median: 85\% \newline 1st quart.: 84\% \newline 3rd quart.: 85\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
+50ms & Median: 91\% \newline 1st quart.: 88\% \newline 3rd quart.: 92\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 98\% \newline 1st quart.: 97\% \newline 3rd quart.: 99\% \\ \hline
+100ms & Median: 9\% \newline 1st quart.: 7\% \newline 3rd quart.: 13\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 64\% \newline 1st quart.: 0\% \newline 3rd quart.: 75\% \\ \hline
+\end{tabularx}
+\caption{Detection accuracy in case there is the \textbf{\textit{fq\_codel}} variant of \textbf{fair queuing}. The overall median accuracy is 95\%, the first quartile is 83\% and the third quartile is 100\%.}
+\label{table:fq_codel}
+\end{table}        
 
 \section{Discussion}
 
