@@ -10,6 +10,7 @@
 \usepackage{hyperref}
 \usepackage{subfig}
 \usepackage{tabularx}
+\usepackage{dblfloatfix}
 \renewcommand{\thefootnote}{\arabic{footnote}}
 \renewcommand{\thempfootnote}{\arabic{mpfootnote}}
 \begin{document}
@@ -25,6 +26,8 @@
 }
 
 \maketitle
+\thispagestyle{plain}
+\pagestyle{plain}
 
 \begin{abstract}
 Fair queuing is becoming increasingly prevalent in the internet and has been shown to improve performance in many circumstances. 
@@ -39,9 +42,33 @@ Unlike an algorithm proposed in a previous paper of us, the approach presented h
 % component, formatting, style, styling, insert
 % \end{IEEEkeywords}
 
+\begin{figure}[h]
+\centering
+\subfloat[\footnotesize \textbf{Sending} rate (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_fq"}.pdf}
+\label{fig:sender}}\\
+\subfloat[\footnotesize \textbf{Receiving} rate (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_fq"}.pdf}
+\label{fig:receiver}}
+\caption{Figure \ref{fig:sender} shows the sending rate, \ref{fig:receiver} the receiving rate in case there's \textbf{fair queuing}. 
+Around seconds 12 and 13.5, the sending rate reaches the maximum of the link -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the flow that is sending more. 
+Thus, in the lower figure, the dominant subflow and the non-dominant subflow achieve approx.~the same receiving rate even though the dominant subflow sends more (dominant subflow). This is the effect of fair queuing.}
+\label{fig:illustration_fq}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\subfloat[\footnotesize \textbf{Sending} rate (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_pfifo"}.pdf}
+\label{fig:sender_pfifo}}\\
+\subfloat[\footnotesize \textbf{Receiving} rate (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
+\label{fig:receiver_pfifo}}
+\caption{Figure \ref{fig:sender_pfifo} shows the sending rate, \ref{fig:receiver_pfifo} the receiving rate in case there's \textbf{no fair queuing}. 
+Even though the sender sends too much and a queue builds up, still the flow that sends more data also has a higher receiving rate. 
+This is in contrast to \autoref{fig:illustration_fq}, where both flows have the same receiving rate once there is congestion at the bottleneck, thanks to fair queuing.}
+\label{fig:illustration_no_fq}
+\end{figure}    
+
 \section{Background}
 
-When different applications send packets on the internet, one application can send more than the other and thus take unfairly take a larger share of bandwidth. 
+When different applications send packets on the internet, one application can send more than the other and thus unfairly take a larger share of bandwidth. 
 This can result in unfairness and bad user experience. Several different approaches have been proposed to address this \cite{brown_future_2020,ware_beyond_2019} : One is to make sure every network flow is ``well-behaved'' (also known as TCP friendly)
 Another one is to enforce fairness at switches and routers, called ``fair queuing'' or ``flow queuing'' \cite{nagle_packet_1985}. 
 
@@ -79,41 +106,39 @@ We would thus like to have an approach which
 
 \section{Concept}
 
-% \begin{figure}
-% \centering
-% \subfloat[\footnotesize Sending rate]{\includegraphics[width=0.33\columnwidth]{{"figures/fq_illustration_throughput"}.pdf}
-% \label{fig:throughput}}
-% \subfloat[\footnotesize Receiving rate\\(no fair queuing)]{\includegraphics[width=0.33\columnwidth]{{"figures/fq_illustration_goodput_no_fq"}.pdf}
-% \label{fig:goodput_no_fq}}
-% \subfloat[\footnotesize Receiving rate\\(fair queuing)]{\includegraphics[width=0.33\columnwidth]{{"figures/fq_illustration_goodput_fq"}.pdf}
-% \label{fig:goodput_fq}}
-% \caption{An example illustrating our proposed flow startup mechanism. Figure \ref{fig:throughput} shows the sending rate, \ref{fig:goodput_no_fq} the receiving rate in case there's no fair queuing and \ref{fig:goodput_fq} the receiving rate if there is fair queuing.}
-% \label{fig:illustration}
-% \end{figure}
+The core concept of our approach, which we call \textbf{Tonopah}, is that a network flow is separated in \textbf{two subflows}. 
+\textbf{Alternatingly}, one flow sends more (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). After a certain time interval the dominant subflow becomes the non-dominant one and vice versa. 
+When the total sending rate reaches the link capacity and fair queuing is present, \textbf{fair queuing} is going to \textbf{limit} the throughput of the \textbf{dominant subflow} (\autoref{fig:illustration_fq}). This can be measured by observing the \textit{delivery rate}
+\footnote{The delivery rate (a concept popularized by BBR \cite{cardwell_bbr_2016}) can be measured by observing the rate at which acknowledgement packets are sent back to the sender by the receiver.
+If the sender sends more than the link capacity, the delivery rate is never going to exceed the link capacity since the receiver cannot receive packets faster than the link capacity allows. 
+}
+of both subflows. If there is no fair queuing, the subflow which sends more also achieves a higher throughput (\autoref{fig:illustration_no_fq}), which can be considered unfair. By alternating which subflow is dominant and which one is non-dominant, we prevent the build-up of a standing queue at the bottleneck: 
+When the dominant subflow builds up a queue at the bottleneck link, it is going to be the non-dominant subflow in the next time interval and then it is going to send less and the queue is going to be reduced. 
 
-\begin{figure}
-\centering
-\subfloat[\footnotesize Sending rate at the sender (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_fq"}.pdf}
-\label{fig:sender}}\\
-\subfloat[\footnotesize Receiving rate at the receiver (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_fq"}.pdf}
-\label{fig:receiver}}
-\caption{Figure \ref{fig:sender} shows the sending rate, \ref{fig:receiver} the receiving rate in case there's fair queuing. 
-Around seconds 12 and 13.5, the sending rate reaches the maximum of the link -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the flow that is sending more. 
-Thus, in the lower figure, the dominant flow and the non-dominant flow achieve approx.~the same receiving rate even though the dominant flow sends more (dominant flow). This is the effect of fair queuing.}
-\label{fig:illustration_fq}
-\end{figure}
+The congestion window of the flow applies to both subflows together. This means that while always the dominant subflow sends more than the non-dominant one, in sum they always send the same amount of data, as allowed by the congestion window.
 
-\begin{figure}
-\centering
-\subfloat[\footnotesize Sending rate at the sender (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_pfifo"}.pdf}
-\label{fig:sender_pfifo}}\\
-\subfloat[\footnotesize Receiving rate at the receiver (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
-\label{fig:receiver_pfifo}}
-\caption{Figure \ref{fig:sender_pfifo} shows the sending rate, \ref{fig:receiver_pfifo} the receiving rate in case there's no fair queuing. 
-Even though the sender sends too much and a queue builds up, still the flow that sends more data also has a higher receiving rate. 
-This is in contrast to \autoref{fig:illustration_fq}, where both flows have the same receiving rate once there is congestion at the bottleneck, thanks to fair queuing.}
-\label{fig:illustration_no_fq}
-\end{figure}
+Thanks to the use of Multipath QUIC \cite{liu_multipath_2022} the application does not see any difference because all data are recombined to one flow by Multipath QUIC. 
+
+\subsection{Details}
+
+The dominant subflow receives $\frac{6}{10}$ of the total allowed sending rate, while the non-dominant one receives $\frac{4}{10}$. 
+The dominant subflow and the non-dominant subflow alternate every $\max{50, \min{100, \textit{rtt}}}$ milliseconds. 
+This time period is also called an \textbf{interval}. To determine the presence of fair queuing, the data of the last four intervals are evaluated. 
+We look at more than one interval because this reduces the effect of measurement noise. We found four intervals to be a suitable number. 
+
+We determine that fair queuing is present if the receiving rate was more fair than not fair. 
+It would be completely fair if both flows get $\frac{1}{2}$ of the total throughput. It would be completely unfair if the dominant subflow got $\frac{6}{10}$ and the non-dominant one $\frac{4}{10}$. 
+If the dominant one got a fraction of 0.549 of the total throughput, it would be just a little bit more fair than unfair. In this case we would say that there is fair queuing. 
+If, on the other side, the dominant subflow got a fraction of 0.551 of the total throughput, we would say that there is no fair queuing. 
+
+Another safeguard against measurement noise is that we only take a decision regarding fair queuing if the dominant flow actually really sent more data than the non-dominant one. 
+Specifically, if the dominant flow sends less than 57.5\%, we don't take a decision because the pacing apparently wasn't accurate enough. 
+This case only occurs when the sending rate is very low ($<$ 10\,Mbit/s) and thus pacing in inaccurate. 
+
+Both subflows are controlled by the same congestion window. The differences in sending rates are implemented by using pacing. 
+The basis of the implementation of Tonopah is \textit{Picoquic}\footnote{\url{https://github.com/private-octopus/picoquic/tree/master/picoquic}}. 
+Picoquic includes support for Multipath QUIC and pacing, which we need for the implementation of Tonopah. Also, it implements congestion control algorithms. 
+We base Tonopah on the Newreno implementation of Picquic. 
 
 \section{Evaluation}
 
