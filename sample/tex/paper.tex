@@ -36,6 +36,7 @@ If fair queuing is detected, the congestion control would not have to take cross
 In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path. 
 When fair queuing is detected, a different congestion control is chosen, which results in reduced latency. 
 Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
+We show that by adding fair queuing detection to an existing congestion control algorithm, queuing delay can be reduced by more than two thirds. 
 \end{abstract}
 
 % \begin{IEEEkeywords}
@@ -106,7 +107,7 @@ We would thus like to have an approach which
 
 \section{Concept}
 
-The core concept of our approach, which we call \textbf{Tonopah}, is that a network flow is separated in \textbf{two subflows}. 
+The core concept of our approach, which we call \textbf{\textit{Tonopah}}, is that a network flow is separated in \textbf{two subflows}. 
 \textbf{Alternatingly}, one flow sends more (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). After a certain time interval the dominant subflow becomes the non-dominant one and vice versa. 
 When the total sending rate reaches the link capacity and fair queuing is present, \textbf{fair queuing} is going to \textbf{limit} the throughput of the \textbf{dominant subflow} (\autoref{fig:illustration_fq}). This can be measured by observing the \textit{delivery rate}
 \footnote{The delivery rate (a concept popularized by BBR \cite{cardwell_bbr_2016}) can be measured by observing the rate at which acknowledgement packets are sent back to the sender by the receiver.
@@ -119,10 +120,15 @@ The congestion window of the flow applies to both subflows together. This means 
 
 Thanks to the use of Multipath QUIC \cite{liu_multipath_2022} the application does not see any difference because all data are recombined to one flow by Multipath QUIC. 
 
+An interesting aspect of fair queuing detection is that the presence of fair queuing can be interpreted as a \textit{congestion signal}: 
+Only if there is congestion, fair queuing can be detected. If the link is underutilized, flows don't ``fight'' for bandwidh and thus fairness doesn't need to be enforced at the bottleneck link. 
+Thus, in this paper, we define a new congestion signal: The presence of fair queuing. Other already known congestion signals are, for example: 
+packet loss; queue length, change of queue length, Explicit Congestion Notification \cite{mathis_relentless_2009,hutchison_revisiting_2011}. 
+
 \subsection{Details}
 
 The dominant subflow receives $\frac{6}{10}$ of the total allowed sending rate, while the non-dominant one receives $\frac{4}{10}$. 
-The dominant subflow and the non-dominant subflow alternate every $\max{50, \min{100, \textit{rtt}}}$ milliseconds. 
+The dominant subflow and the non-dominant subflow alternate every $\max{(50, \min{(100, \textit{rtt})})}$ milliseconds. 
 This time period is also called an \textbf{interval}. To determine the presence of fair queuing, the data of the last four intervals are evaluated. 
 We look at more than one interval because this reduces the effect of measurement noise. We found four intervals to be a suitable number. 
 
@@ -138,9 +144,16 @@ This case only occurs when the sending rate is very low ($<$ 10\,Mbit/s) and thu
 Both subflows are controlled by the same congestion window. The differences in sending rates are implemented by using pacing. 
 The basis of the implementation of Tonopah is \textit{Picoquic}\footnote{\url{https://github.com/private-octopus/picoquic/tree/master/picoquic}}. 
 Picoquic includes support for Multipath QUIC and pacing, which we need for the implementation of Tonopah. Also, it implements congestion control algorithms. 
-We base Tonopah on the Newreno implementation of Picquic. 
+We base Tonopah on the NewReno implementation of Picquic. When fair queuing is detected, the congestion window is reduced by $\frac{1}{8}$. 
+This worked well for our proof-of-concept implementation but one could also specify any other behavior in case fair queuing is detected or even do nothing at all. 
 
 \section{Evaluation}
+
+Tonopah was implemented on top of Picquic in C. It was added on top of the NewReno congestion control algorithm but it could easily be added on top of other 
+congestion control algorithms as well. By basing our implementation on Picoquic, Tonopah also supports Explicit Congestion Notification. 
+
+We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.70GHz. 
+By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
 \begin{table}
 \begin{tabularx}{\columnwidth}{| l | X | X | X |}
@@ -166,7 +179,7 @@ We base Tonopah on the Newreno implementation of Picquic.
 \label{table:fq}
 \end{table}    
 
-\subsection{Throughput and delay of Tonopah}
+\subsection{Throughput and Queuing Delay of Tonopah}
 
 \begin{table}
 \begin{minipage}{\columnwidth}
@@ -174,15 +187,19 @@ We base Tonopah on the Newreno implementation of Picquic.
 \begin{tabular}{| r | r | r |}
 \hline
 & Link utilization & Queuing delay \\ \hline
-Newreno & 95.6\% & 10.5 ms \\ \hline
+NewReno & 95.6\% & 10.5 ms \\ \hline
 Tonopah & 94.3\% & 33.6 ms \\ \hline
 % p-value\protect\footnote{Using Welch's t-test} & 0.86 & $1.9 \times 10^{-6}$ \\ \hline
-% $\frac{\text{Newreno}}{\text{Tonopah}}$ & 103\% & 321\% \\ \hline
+% $\frac{\text{NewReno}}{\text{Tonopah}}$ & 103\% & 321\% \\ \hline
 \end{tabular}
-\caption{Newreno's link utilization is 103\% Tonopah's. But the \textbf{queuing delay} of Newreno is \textbf{321\%} Tonopah's. This means that Tonopah can deliver the same throughput while cause a lot less queuing delay. The differences in \textbf{queuing delay} are \textbf{highly significant} (p-value\protect\footnote{Using Welch's t-test} $< 10^{-5}$).}
+\caption{NewReno's link utilization is 103\% Tonopah's. But the \textbf{queuing delay} of NewReno is \textbf{321\%} Tonopah's. This means that Tonopah can deliver the same throughput while cause a lot less queuing delay. The differences in \textbf{queuing delay} are \textbf{highly significant} (p-value\protect\footnote{Using Welch's t-test} $< 10^{-5}$).}
 \label{table:throughput_and_delay}
 \end{minipage}
 \end{table}    
+
+While the goal of this paper is to implement a mechanism to detect fair queuing in an online fashion, 
+we also want to show that fair queuing detection can be used to lower the queuing delay drastically while not impairing throughput. 
+\autoref{table:throughput_and_delay} shows that Tonopah can lower queuing delay by more than two thirds while keeping throughput unchanged, when it is implemented on top on NewReno
 
 \subsection{Cross-traffic}
 
@@ -211,6 +228,12 @@ Tonopah & 94.3\% & 33.6 ms \\ \hline
 \end{table}        
 
 \subsection{Other variants of fair queuing}
+
+We also evaluated the performance of our fair queuing detection on a bottleneck managed by fq\_codel \cite{hoeiland-joergensen_flow_2018}. 
+We chose a default target queuing delay of 10\,ms following Apple's implementation\footnote{
+    \url{https://github.com/apple/darwin-xnu/blob/main/bsd/net/if.h\#L262}
+} because we argue that Apple probably spent a considerable amount of time fine-tuning their implementation and 
+came to the conclusion that 10\,ms work best as the default target delay. 
 
 \begin{table}
 \begin{tabularx}{\columnwidth}{| l | X | X | X |}
