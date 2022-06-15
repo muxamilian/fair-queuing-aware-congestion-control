@@ -37,11 +37,9 @@ for i, y in enumerate(ys):
 	plt.plot(x, y, alpha=0.67, label=labels[i])
 
 
-# plt.arrow(12.05, 10, 0, 12, color="black", edgecolor="black")
 plt.annotate("fair queuing", xy=(12.05, 23), xytext=(12.05, 10),
             arrowprops=dict(arrowstyle="->"), horizontalalignment='center')
 
-# plt.arrow(12.05, 10, 0, 12, color="black", edgecolor="black")
 plt.annotate("fair queuing", xy=(13.4, 23), xytext=(13.4, 10),
             arrowprops=dict(arrowstyle="->"), horizontalalignment='center')
 
@@ -50,5 +48,5 @@ plt.ylabel("Throughput (Mbit/s)")
 plt.ylim(bottom=0)
 plt.legend(loc="lower left")
 plt.tight_layout()
-plt.savefig("plots/bw.pdf", bbox_inches = 'tight', pad_inches = 0)
-plt.show()
+# plt.savefig("plots/bw.pdf", bbox_inches = 'tight', pad_inches = 0)
+# plt.show()

@@ -24,7 +24,7 @@ def add_plot(input_source):
     x = x / 1_000_000
     y = y / 1000.
     print("mean rtt:", np.mean(y))
-    plt.plot(x, y, alpha=0.67)
+    # plt.plot(x, y, alpha=0.67)
 
 if len(sys.argv) <= 1:
     input_source = fileinput.input()
@@ -40,4 +40,4 @@ else:
 plt.xlabel("Time (s)")
 plt.ylabel("Delay (ms)")
 plt.ylim(bottom=0)
-plt.show()
+# plt.show()

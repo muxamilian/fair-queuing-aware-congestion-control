@@ -36,7 +36,7 @@ If fair queuing is detected, the congestion control would not have to take cross
 In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path. 
 When fair queuing is detected, a different congestion control is chosen, which results in reduced latency. 
 Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
-We show that by adding fair queuing detection to an existing congestion control algorithm, queuing delay can be reduced by more than two thirds. 
+% We show that by adding fair queuing detection to an existing congestion control algorithm, queuing delay can be reduced by more than two thirds. 
 \end{abstract}
 
 % \begin{IEEEkeywords}
@@ -113,7 +113,10 @@ When the total sending rate reaches the link capacity and fair queuing is presen
 \footnote{The delivery rate (a concept popularized by BBR \cite{cardwell_bbr_2016}) can be measured by observing the rate at which acknowledgement packets are sent back to the sender by the receiver.
 If the sender sends more than the link capacity, the delivery rate is never going to exceed the link capacity since the receiver cannot receive packets faster than the link capacity allows. 
 }
-of both subflows. If there is no fair queuing, the subflow which sends more also achieves a higher throughput (\autoref{fig:illustration_no_fq}), which can be considered unfair. By alternating which subflow is dominant and which one is non-dominant, we prevent the build-up of a standing queue at the bottleneck: 
+of both subflows. If there is no fair queuing, the subflow which sends more also achieves a higher throughput (\autoref{fig:illustration_no_fq}), which can be considered unfair. 
+In this case, Tonopah doesn't behave different from a network flow which doesn't have fair queuing detection. 
+
+By alternating which subflow is dominant and which one is non-dominant, we prevent the build-up of a standing queue at the bottleneck: 
 When the dominant subflow builds up a queue at the bottleneck link, it is going to be the non-dominant subflow in the next time interval and then it is going to send less and the queue is going to be reduced. 
 
 The congestion window of the flow applies to both subflows together. This means that while always the dominant subflow sends more than the non-dominant one, in sum they always send the same amount of data, as allowed by the congestion window.
@@ -155,6 +158,11 @@ congestion control algorithms as well. By basing our implementation on Picoquic,
 We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.70GHz. 
 By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
+We emulate the network using mininet and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing in \textit{fq} for fair queuing. 
+
+In the following evaluation we always run each network flow for 90\,s. Tonopah measures whether there is fair queuing or not continuously. 
+If in the evaluation scenario there is fair queuing, and Tonopah detects fair queuing for 80\,s and fails to detect it for 10\,s we 
+state the accuracy as $\frac{80}{90} = 89\%$. 
 \begin{table}
 \begin{tabularx}{\columnwidth}{| l | X | X | X |}
 \hline
@@ -179,6 +187,9 @@ By choosing old hardware for experimentation, we can show that our algorithm doe
 \label{table:fq}
 \end{table}    
 
+\autoref{table:no_fq} shows that if there is no fair queuing, Tonopah detects this correctly virtually always. 
+If there is fair queuing (\autoref{table:fq}), Tonopah detects this correctly very often but not in every case. 
+
 \subsection{Throughput and Queuing Delay of Tonopah}
 
 \begin{table}
@@ -199,7 +210,8 @@ Tonopah & 94.3\% & 33.6 ms \\ \hline
 
 While the goal of this paper is to implement a mechanism to detect fair queuing in an online fashion, 
 we also want to show that fair queuing detection can be used to lower the queuing delay drastically while not impairing throughput. 
-\autoref{table:throughput_and_delay} shows that Tonopah can lower queuing delay by more than two thirds while keeping throughput unchanged, when it is implemented on top on NewReno
+\autoref{table:throughput_and_delay} shows that Tonopah can lower queuing delay by more than two thirds while keeping throughput unchanged, when it is implemented on top on NewReno. 
+However, Tonopah we want to emphasize that Tonopah is not a congestion control algorithm but just a mechanism to measure fair queuing which can be used with any congestion control algorithm. 
 
 \subsection{Cross-traffic}
 
@@ -227,13 +239,10 @@ we also want to show that fair queuing detection can be used to lower the queuin
 \label{table:fq_crosstraffic}
 \end{table}        
 
-\subsection{Other variants of fair queuing}
+As crosstraffic we use an iperf with the Newreno congestion control. We start it 4\,s so that it has time to saturate the link. 
+\autoref{table:no_fq_crosstraffic} and \autoref{table:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged. 
 
-We also evaluated the performance of our fair queuing detection on a bottleneck managed by fq\_codel \cite{hoeiland-joergensen_flow_2018}. 
-We chose a default target queuing delay of 10\,ms following Apple's implementation\footnote{
-    \url{https://github.com/apple/darwin-xnu/blob/main/bsd/net/if.h\#L262}
-} because we argue that Apple probably spent a considerable amount of time fine-tuning their implementation and 
-came to the conclusion that 10\,ms work best as the default target delay. 
+\subsection{Other variants of fair queuing}
 
 \begin{table}
 \begin{tabularx}{\columnwidth}{| l | X | X | X |}
@@ -246,6 +255,14 @@ came to the conclusion that 10\,ms work best as the default target delay.
 \caption{Detection accuracy in case there is the \textbf{\textit{fq\_codel}} variant of \textbf{fair queuing}. The overall median accuracy is 95\%, the first quartile is 83\% and the third quartile is 100\%.}
 \label{table:fq_codel}
 \end{table}        
+
+We also evaluated the performance of our fair queuing detection on a bottleneck managed by fq\_codel \cite{hoeiland-joergensen_flow_2018}. 
+We chose a default target queuing delay of 10\,ms following Apple's implementation\footnote{
+    \url{https://github.com/apple/darwin-xnu/blob/main/bsd/net/if.h\#L262}
+} because we argue that Apple probably spent a considerable amount of time fine-tuning their implementation and 
+came to the conclusion that 10\,ms work best as the default target delay. 
+
+\autoref{table:fq_codel} shows that Tonopah doesn't detect fair queuing as well when there's fq\_codel compared to when there is fq. Median detection accuracy is 95\%.
 
 \section{Discussion}
 
