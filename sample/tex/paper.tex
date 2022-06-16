@@ -45,21 +45,21 @@ Unlike an algorithm proposed in a previous paper of us, the approach presented h
 
 \begin{figure}[h]
 \centering
-\subfloat[\footnotesize \textbf{Sending} rate (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_fq"}.pdf}
+\subfloat[\footnotesize \textbf{Sending} rate at the sender (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_fq"}.pdf}
 \label{fig:sender}}\\
-\subfloat[\footnotesize \textbf{Receiving} rate (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_fq"}.pdf}
+\subfloat[\footnotesize \textbf{Receiving} rate at the receiver (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_fq"}.pdf}
 \label{fig:receiver}}
 \caption{Figure \ref{fig:sender} shows the sending rate, \ref{fig:receiver} the receiving rate in case there's \textbf{fair queuing}. 
-Around seconds 12 and 13.5, the sending rate reaches the maximum of the link -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the flow that is sending more. 
+Around seconds 12 and 13.5, the sending rate reaches the maximum of the link -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the subflow that is sending more. 
 Thus, in the lower figure, the dominant subflow and the non-dominant subflow achieve approx.~the same receiving rate even though the dominant subflow sends more (dominant subflow). This is the effect of fair queuing.}
 \label{fig:illustration_fq}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\subfloat[\footnotesize \textbf{Sending} rate (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_pfifo"}.pdf}
+\subfloat[\footnotesize \textbf{Sending} rate at the sender (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_pfifo"}.pdf}
 \label{fig:sender_pfifo}}\\
-\subfloat[\footnotesize \textbf{Receiving} rate (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
+\subfloat[\footnotesize \textbf{Receiving} rate at the receiver (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
 \label{fig:receiver_pfifo}}
 \caption{Figure \ref{fig:sender_pfifo} shows the sending rate, \ref{fig:receiver_pfifo} the receiving rate in case there's \textbf{no fair queuing}. 
 Even though the sender sends too much and a queue builds up, still the flow that sends more data also has a higher receiving rate. 
@@ -69,29 +69,25 @@ This is in contrast to \autoref{fig:illustration_fq}, where both flows have the 
 
 \section{Background}
 
-When different applications send packets on the internet, one application can send more than the other and thus unfairly take a larger share of bandwidth. 
-This can result in unfairness and bad user experience. Several different approaches have been proposed to address this \cite{brown_future_2020,ware_beyond_2019} : One is to make sure every network flow is ``well-behaved'' (also known as TCP friendly)
+When different applications send packets over the internet, one application can send more than the other and thus unfairly take a larger share of bandwidth. 
+This can result in unfairness and bad user experience. Several different approaches have been proposed to address this \cite{brown_future_2020,ware_beyond_2019}: One is to make sure every network flow is ``well-behaved'' (also known as TCP friendly). 
 Another one is to enforce fairness at switches and routers, called ``fair queuing'' or ``flow queuing'' \cite{nagle_packet_1985}. 
 
-While fair queuing was proposed decades ago, it only gained popularity in the last couple of years because of implementations in the Linux kernel \cite{dumazet_pkt_sched_2013,hoeiland-joergensen_flow_2018}. 
+While fair queuing was proposed decades ago, it only gained popularity in the last couple of years because of implementations in the Linux kernel \cite{dumazet_pkt_sched_2013,hoeiland-joergensen_flow_2018} and also in Apple's macOS. 
 Applications can benefit from increasing deployment of fair queuing: It makes sure that not the most aggressive one wins. 
-It would be even better if applications could know if the connection they're sending on is managed by fair queuing. Then they could be sure that the can use a common congestion control mechanism, while not bothering or being bothered by other network flows.
+It would be even better if applications could know if the connection they're sending on is managed by fair queuing. 
+Then they could be sure that the can use their preferred congestion control mechanism, while not bothering or being bothered by other network flows. 
 We proposed the first such approach in previous work \cite{bachl_detecting_2021} but our previous approach had some shortcomings upon which we improve in this paper. 
 
-Our approach is a congestion control mechanism which also performs measurements to determine if there is fair queuing. 
-This approach of performing measurements in congestion control became popular in the last couple of years and was already followed by \cite{cardwell_bbr_2016,dong_pcc_2015,goyal_elasticity_2020,hayes_online_2020}.
-
-\section{Introduction}
-
-In our previous work we proposed a technique which determines the presence of fair queuing at flow startup \cite{bachl_detecting_2021}, which worked as follows: 
+In our previous work we proposed a technique which determines the presence of fair queuing at flow startup, which worked as follows: 
 If fair queuing is successfully detected at flow startup, a congestion control was used, which aimed to keep queuing delay low (delay-based congestion control). 
 While this delay-based congestion control achieved high throughput and low delay, it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,ha_cubic_2008}, 
 similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}.
 This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus is only used if fair queuing is detected. 
-If it is detected that there is no fair queuing, our approach uses a more aggressive congestion control (specifically PCC \cite{dong_pcc_2015}), which can compete better with other network flows,
+If the absence of fair queuing is detected, our previous approach uses a more aggressive congestion control (specifically PCC \cite{dong_pcc_2015}), which can compete better with other network flows,
 but doesn't keep delay as low as our delay-based congestion control. 
 
-While our previous approach had high detection accuracy (98\%), it also had some limitations:
+While our previous approach had high detection accuracy (98\%), it also had the following limitations:
 \begin{itemize}
     \item It would \textbf{only} detect fair queuing at \textbf{flow startup}. 
     But if the bottleneck link changes during a flow, it could be that the previous bottleneck had fair queuing while the new one doesn't. This wouldn't have been detected. 
@@ -107,9 +103,15 @@ We would thus like to have an approach which
 
 \section{Concept}
 
+Our new approach presented here is a mechanism which performs measurements to determine if there is fair queuing. Our mechanism can be added on top of any existing congestion control algorithm. 
+The approach of performing measurements in congestion control became popular in the last couple of years and was already followed by \cite{cardwell_bbr_2016,dong_pcc_2015,goyal_elasticity_2020,hayes_online_2020}.
+
 The core concept of our approach, which we call \textbf{\textit{Tonopah}}, is that a network flow is separated in \textbf{two subflows}. 
-\textbf{Alternatingly}, one flow sends more (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). After a certain time interval the dominant subflow becomes the non-dominant one and vice versa. 
-When the total sending rate reaches the link capacity and fair queuing is present, \textbf{fair queuing} is going to \textbf{limit} the throughput of the \textbf{dominant subflow} (\autoref{fig:illustration_fq}). This can be measured by observing the \textit{delivery rate}
+\textbf{Alternatingly}, one flow sends more (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). 
+After a certain time interval the dominant subflow becomes the non-dominant one and vice versa. 
+When the total sending rate reaches the link capacity and fair queuing is present, 
+\textbf{fair queuing} is going to \textbf{limit} the throughput of the \textbf{dominant subflow} (\autoref{fig:illustration_fq}). 
+This can be measured by observing the \textit{delivery rate}
 \footnote{The delivery rate (a concept popularized by BBR \cite{cardwell_bbr_2016}) can be measured by observing the rate at which acknowledgement packets are sent back to the sender by the receiver.
 If the sender sends more than the link capacity, the delivery rate is never going to exceed the link capacity since the receiver cannot receive packets faster than the link capacity allows. 
 }
@@ -126,7 +128,7 @@ Thanks to the use of Multipath QUIC \cite{liu_multipath_2022} the application do
 An interesting aspect of fair queuing detection is that the presence of fair queuing can be interpreted as a \textit{congestion signal}: 
 Only if there is congestion, fair queuing can be detected. If the link is underutilized, flows don't ``fight'' for bandwidh and thus fairness doesn't need to be enforced at the bottleneck link. 
 Thus, in this paper, we define a new congestion signal: The presence of fair queuing. Other already known congestion signals are, for example: 
-packet loss; queue length, change of queue length, Explicit Congestion Notification \cite{mathis_relentless_2009,hutchison_revisiting_2011}. 
+packet loss, queue length, change of queue length, Explicit Congestion Notification \cite{mathis_relentless_2009,hutchison_revisiting_2011}. 
 
 \subsection{Details}
 
@@ -141,8 +143,8 @@ If the dominant one got a fraction of 0.549 of the total throughput, it would be
 If, on the other side, the dominant subflow got a fraction of 0.551 of the total throughput, we would say that there is no fair queuing. 
 
 Another safeguard against measurement noise is that we only take a decision regarding fair queuing if the dominant flow actually really sent more data than the non-dominant one. 
-Specifically, if the dominant flow sends less than 57.5\%, we don't take a decision because the pacing apparently wasn't accurate enough. 
-This case only occurs when the sending rate is very low ($<$ 10\,Mbit/s) and thus pacing in inaccurate. 
+Specifically, if the dominant flow sends less than 57.5\%, we don't take a decision because it means that probably we didn't have enough data to send. 
+This case only occurs when the sending rate is very low ($<$ 10\,Mbit/s). 
 
 Both subflows are controlled by the same congestion window. The differences in sending rates are implemented by using pacing. 
 The basis of the implementation of Tonopah is \textit{Picoquic}\footnote{\url{https://github.com/private-octopus/picoquic/tree/master/picoquic}}. 
@@ -159,9 +161,12 @@ We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-255
 By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
 We emulate the network using mininet and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing in \textit{fq} for fair queuing. 
+For evaluation we choose a network in which the sender is connected to the receiver via a switch (dumbbell topology). 
+
+All the source code and evaluation code of this paper are freely available (refer to the very top of this paper). 
 
 In the following evaluation we always run each network flow for 90\,s. Tonopah measures whether there is fair queuing or not continuously. 
-If in the evaluation scenario there is fair queuing, and Tonopah detects fair queuing for 80\,s and fails to detect it for 10\,s we 
+If in the evaluation scenario there is fair queuing and Tonopah detects fair queuing for 80\,s and fails to detect it for 10\,s, we 
 state the accuracy as $\frac{80}{90} = 89\%$. 
 \begin{table}
 \begin{tabularx}{\columnwidth}{| l | X | X | X |}
@@ -211,7 +216,7 @@ Tonopah & 94.3\% & 33.6 ms \\ \hline
 While the goal of this paper is to implement a mechanism to detect fair queuing in an online fashion, 
 we also want to show that fair queuing detection can be used to lower the queuing delay drastically while not impairing throughput. 
 \autoref{table:throughput_and_delay} shows that Tonopah can lower queuing delay by more than two thirds while keeping throughput unchanged, when it is implemented on top on NewReno. 
-However, Tonopah we want to emphasize that Tonopah is not a congestion control algorithm but just a mechanism to measure fair queuing which can be used with any congestion control algorithm. 
+However, we want to emphasize that Tonopah is not a congestion control algorithm but just a mechanism to measure fair queuing which can be used with any congestion control algorithm. 
 
 \subsection{Cross-traffic}
 
@@ -239,7 +244,7 @@ However, Tonopah we want to emphasize that Tonopah is not a congestion control a
 \label{table:fq_crosstraffic}
 \end{table}        
 
-As crosstraffic we use an iperf with the Newreno congestion control. We start it 4\,s so that it has time to saturate the link. 
+To evaluate Tonopah's performance under crosstraffic, we use iperf with the NewReno congestion control. We start iperf 4\,s before Tonopah so that it has time to saturate the link. 
 \autoref{table:no_fq_crosstraffic} and \autoref{table:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged. 
 
 \subsection{Other variants of fair queuing}
@@ -265,6 +270,12 @@ came to the conclusion that 10\,ms work best as the default target delay.
 \autoref{table:fq_codel} shows that Tonopah doesn't detect fair queuing as well when there's fq\_codel compared to when there is fq. Median detection accuracy is 95\%.
 
 \section{Discussion}
+
+We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy. 
+We also showed that it can work with alternative versions of fair queuing such as fq\_codel although accuracy depends on the configuration of the queue manager, 
+the link capacity, base delay etc. Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cocoa} \cite{bachl_cocoa_2019} or \textit{cake} \cite{hoiland-jorgensen_piece_2018}. 
+
+Another potentially fruitful line of research would be to integrate Tonopah into other congestion control algorithms such as BBR. 
 
 \bibliographystyle{ieeetr}
 \bibliography{fair-queuing-aware-congestion-control}
