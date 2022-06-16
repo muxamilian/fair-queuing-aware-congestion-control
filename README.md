@@ -2,9 +2,31 @@
 
 This repo contains the code for *Fair Queuing Aware Congestion Control*, an upcoming research work. 
 
-It is a congestion control algorithm that always uses two subflows with the same source and destination IP address. It alternatingly sends more data on one of the two subflows and then checks whether the subflow that sent more could achieve more throughput. If this is the case, then there's no fair queuing, otherwise, if both subflows achieve the same throughput, even though one sends more, it means that there's fair queuing. 
+It is an congestion control algorithm that always uses two subflows with the same source and destination IP address. It alternatingly sends more data on one of the two subflows and then checks whether the subflow that sent more could achieve more throughput. If this is the case, then there's no fair queuing, otherwise, if both subflows achieve the same throughput, even though one sends more, it means that there iss fair queuing. 
 
 The idea is that one uses regular congestion control when no fair queuing is detected. If there's fair queuing, one is free to use any congestion control algorithm as it cannot interact badly with other flows as fairness is always guaranteed. 
+
+## Running the code
+
+We ran our experiments on Ubuntu 20.04 and for all software we used the official Ubuntu repository (except for mininet). 
+
+To run the code, install `picquic` as described below.
+
+Also install `mininet` from mininets website. 
+
+Then, run run an experiment with our congestion control (Tonopah) with fair queuing like this: 
+
+    sudo python3 sample/network_sim.py --qdisc fq --cc tonopah
+    
+To run without fair queuing, run it like this:
+
+    sudo python3 sample/network_sim.py --qdisc pfifo --cc tonopah
+    
+You can also specify `fq_codel` as an alternative version of fair queuing. 
+    
+If you want to compare against NewReno or BBR, you can evaluate them like this:
+
+    sudo python3 sample/network_sim.py --qdisc <fq --cc <bbr,newreno>
 
 # picoquic -- Original Readme
 
