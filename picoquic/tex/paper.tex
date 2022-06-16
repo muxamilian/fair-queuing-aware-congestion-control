@@ -34,7 +34,7 @@ Fair queuing is becoming increasingly prevalent in the internet and has been sho
 Performance could be improved even more if endpoints could detect the presence of fair queuing on a certain path and adjust their congestion control accordingly. 
 If fair queuing is detected, the congestion control would not have to take cross traffic into account, which allows for more flexibility. 
 In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path. 
-When fair queuing is detected, a different congestion control is chosen, which results in reduced latency. 
+When fair queuing is detected, a different congestion control can be chosen, which can result in reduced latency. 
 Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
 % We show that by adding fair queuing detection to an existing congestion control algorithm, queuing delay can be reduced by more than two thirds. 
 \end{abstract}
@@ -76,14 +76,14 @@ Another one is to enforce fairness at switches and routers, called ``fair queuin
 While fair queuing was proposed decades ago, it only gained popularity in the last couple of years because of implementations in the Linux kernel \cite{dumazet_pkt_sched_2013,hoeiland-joergensen_flow_2018} and also in Apple's macOS. 
 Applications can benefit from increasing deployment of fair queuing: It makes sure that not the most aggressive one wins. 
 It would be even better if applications could know if the connection they're sending on is managed by fair queuing. 
-Then they could be sure that the can use their preferred congestion control mechanism, while not bothering or being bothered by other network flows. 
+Then they could be sure that they can use their preferred congestion control mechanism, while not bothering or being bothered by other network flows. 
 We proposed the first such approach in previous work \cite{bachl_detecting_2021} but our previous approach had some shortcomings upon which we improve in this paper. 
 
 In our previous work we proposed a technique which determines the presence of fair queuing at flow startup, which worked as follows: 
 If fair queuing is successfully detected at flow startup, a congestion control was used, which aimed to keep queuing delay low (delay-based congestion control). 
 While this delay-based congestion control achieved high throughput and low delay, it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,ha_cubic_2008}, 
 similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}.
-This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus is only used if fair queuing is detected. 
+This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus it is only used if fair queuing is detected. 
 If the absence of fair queuing is detected, our previous approach uses a more aggressive congestion control (specifically PCC \cite{dong_pcc_2015}), which can compete better with other network flows,
 but doesn't keep delay as low as our delay-based congestion control. 
 
@@ -106,7 +106,7 @@ We would thus like to have an approach which
 Our new approach presented here is a mechanism which performs measurements to determine if there is fair queuing. Our mechanism can be added on top of any existing congestion control algorithm. 
 The approach of performing measurements in congestion control became popular in the last couple of years and was already followed by \cite{cardwell_bbr_2016,dong_pcc_2015,goyal_elasticity_2020,hayes_online_2020}.
 
-The core concept of our approach, which we call \textbf{\textit{Tonopah}}, is that a network flow is separated in \textbf{two subflows}. 
+The core concept of our approach, which we call \textbf{\textit{Tonopah}}, is that a network flow is separated into \textbf{two subflows}. 
 \textbf{Alternatingly}, one flow sends more (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). 
 After a certain time interval the dominant subflow becomes the non-dominant one and vice versa. 
 When the total sending rate reaches the link capacity and fair queuing is present, 
@@ -134,7 +134,7 @@ packet loss, queue length, change of queue length, Explicit Congestion Notificat
 
 The dominant subflow receives $\frac{6}{10}$ of the total allowed sending rate, while the non-dominant one receives $\frac{4}{10}$. 
 The dominant subflow and the non-dominant subflow alternate every $\max{(50, \min{(100, \textit{rtt})})}$ milliseconds. 
-This time period is also called an \textbf{interval}. To determine the presence of fair queuing, the data of the last four intervals are evaluated. 
+This time period is also called an \textbf{\textit{interval}}. To determine the presence of fair queuing, the data of the last four intervals are evaluated. 
 We look at more than one interval because this reduces the effect of measurement noise. We found four intervals to be a suitable number. 
 
 We determine that fair queuing is present if the receiving rate was more fair than not fair. 
@@ -144,7 +144,7 @@ If, on the other side, the dominant subflow got a fraction of 0.551 of the total
 
 Another safeguard against measurement noise is that we only take a decision regarding fair queuing if the dominant flow actually really sent more data than the non-dominant one. 
 Specifically, if the dominant flow sends less than 57.5\%, we don't take a decision because it means that probably we didn't have enough data to send. 
-This case only occurs when the sending rate is very low ($<$ 10\,Mbit/s). 
+This case only occurs when the underlying application has no data to send or when the sending rate is very low ($<$ 10\,Mbit/s). 
 
 Both subflows are controlled by the same congestion window. The differences in sending rates are implemented by using pacing. 
 The basis of the implementation of Tonopah is \textit{Picoquic}\footnote{\url{https://github.com/private-octopus/picoquic/tree/master/picoquic}}. 
@@ -154,7 +154,7 @@ This worked well for our proof-of-concept implementation but one could also spec
 
 \section{Evaluation}
 
-Tonopah was implemented on top of Picquic in C. It was added on top of the NewReno congestion control algorithm but it could easily be added on top of other 
+Tonopah was implemented on top of Picoquic in C. It was added on top of the NewReno congestion control algorithm but it could easily be added on top of other 
 congestion control algorithms as well. By basing our implementation on Picoquic, Tonopah also supports Explicit Congestion Notification. 
 
 We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.70GHz. 
@@ -165,7 +165,7 @@ For evaluation we choose a network in which the sender is connected to the recei
 
 All the source code and evaluation code of this paper are freely available (refer to the very top of this paper). 
 
-In the following evaluation we always run each network flow for 90\,s. Tonopah measures whether there is fair queuing or not continuously. 
+In the following evaluations we always run each network flow for 90\,s. Tonopah measures whether there is fair queuing or not continuously. 
 If in the evaluation scenario there is fair queuing and Tonopah detects fair queuing for 80\,s and fails to detect it for 10\,s, we 
 state the accuracy as $\frac{80}{90} = 89\%$. 
 \begin{table}
@@ -191,6 +191,8 @@ state the accuracy as $\frac{80}{90} = 89\%$.
 \caption{Detection accuracy in case there is \textbf{fair queuing}.  The overall median accuracy is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
 \label{table:fq}
 \end{table}    
+
+\subsection{Detection accuracy}
 
 \autoref{table:no_fq} shows that if there is no fair queuing, Tonopah detects this correctly virtually always. 
 If there is fair queuing (\autoref{table:fq}), Tonopah detects this correctly very often but not in every case. 
