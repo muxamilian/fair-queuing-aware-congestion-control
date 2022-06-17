@@ -51,7 +51,7 @@ Unlike an algorithm proposed in a previous paper of us, the approach presented h
 \label{fig:receiver}}
 \caption{Figure \ref{fig:sender} shows the sending rate, \ref{fig:receiver} the receiving rate in case there's \textbf{fair queuing}. 
 Around second 82, the total sending rate is exceeding the link capacity -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the subflow that is sending more. 
-Thus, in the lower figure, the dominant subflow and the non-dominant subflow achieve approx.~the same receiving rate even though the dominant subflow sends more (dominant subflow). This is the effect of fair queuing.}
+Thus, in the lower figure, the dominant subflow and the non-dominant subflow achieve approx.~the same receiving rate even though the dominant subflow sends more. This is the effect of fair queuing.}
 \label{fig:illustration_fq}
 \end{figure}
 
@@ -62,8 +62,8 @@ Thus, in the lower figure, the dominant subflow and the non-dominant subflow ach
 \subfloat[\footnotesize \textbf{Receiving} rate at the receiver (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
 \label{fig:receiver_pfifo}}
 \caption{Figure \ref{fig:sender_pfifo} shows the sending rate, \ref{fig:receiver_pfifo} the receiving rate in case there's \textbf{no fair queuing}. 
-Even though the sender sends too much and a queue builds up, still the flow that sends more data also has a higher receiving rate. 
-This is in contrast to \autoref{fig:illustration_fq}, where both flows have the same receiving rate once there is congestion at the bottleneck, thanks to fair queuing. }
+Even though the sender sends too much and a queue builds up, still the subflow that sends more data also has a higher receiving rate. 
+This is in contrast to \autoref{fig:illustration_fq}, where both subflows have the same receiving rate once there is congestion at the bottleneck, thanks to fair queuing. }
 \label{fig:illustration_no_fq}
 \end{figure}    
 
