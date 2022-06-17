@@ -68,11 +68,13 @@ bw_results = []
 delay_results = []
 results = []
 
-for delay in (10, 50, 100):
+# for delay in (10, 50, 100):
+for delay in (50,):
     bw_results.append([])
     delay_results.append([])
     results.append([])
-    for rate in (10, 50, 100):
+    # for rate in (10, 50, 100):
+    for rate in (50,):
         bw_results[-1].append([])
         delay_results[-1].append([])
         results[-1].append([])
@@ -257,9 +259,9 @@ for delay in (10, 50, 100):
                     info.append((ts, value))
             print("info", info)
             correct_duration = 0.0
-            if (unexpected_cnxid or len(info)-2 <= 0) and args.cc == "tonopah":
-                print("Got too few results...")
-                continue
+            # if (unexpected_cnxid or len(info)-2 <= 0) and args.cc == "tonopah":
+            #     print("Got too few results...")
+            #     continue
             if len(info)-2 > 0 and args.cc == "tonopah":    
                 for i in range(len(info)-2):
                     assert info[i+1][1] is not None
@@ -271,19 +273,19 @@ for delay in (10, 50, 100):
                 print("duration", duration, 'correct', correct_rate)
                 results[-1][-1].append(correct_rate)
 
-            bw_string = """tshark -n -r logs/client.pcap -q -z io,stat,0.01,"BYTES()udp.srcport == 4433 || udp.srcport == 4434","BYTES()udp.srcport == 4433","BYTES()udp.srcport == 4434","BYTES()ip.src==192.168.0.2" | grep '<>' | awk '{print $2","$6}' | sudo -u max python plot_bandwidth.py"""
-            output = subprocess.check_output(bw_string, shell=True).decode("utf-8")
-            parsed_bw = float(output.strip().split(' ')[-1])
-            print("bw", parsed_bw)
-            bw_results[-1][-1].append(parsed_bw)
-            delay_string = """cat logs/client.qlog | sudo -u max python plot_rtt.py"""
-            output = subprocess.check_output(delay_string, shell=True).decode("utf-8")
-            parsed_delay = float(output.strip().split(' ')[-1]) - delay
-            print("delay", parsed_delay)
-            delay_results[-1][-1].append(parsed_delay)
+            # bw_string = """tshark -n -r logs/client.pcap -q -z io,stat,0.01,"BYTES()udp.srcport == 4433 || udp.srcport == 4434","BYTES()udp.srcport == 4433","BYTES()udp.srcport == 4434","BYTES()ip.src==192.168.0.2" | grep '<>' | awk '{print $2","$6}' | sudo -u max python plot_bandwidth.py"""
+            # output = subprocess.check_output(bw_string, shell=True).decode("utf-8")
+            # parsed_bw = float(output.strip().split(' ')[-1])
+            # print("bw", parsed_bw)
+            # bw_results[-1][-1].append(parsed_bw)
+            # delay_string = """cat logs/client.qlog | sudo -u max python plot_rtt.py"""
+            # output = subprocess.check_output(delay_string, shell=True).decode("utf-8")
+            # parsed_delay = float(output.strip().split(' ')[-1]) - delay
+            # print("delay", parsed_delay)
+            # delay_results[-1][-1].append(parsed_delay)
 
             rep_counter += 1
-            # quit()
+            quit()
             # time.sleep(5)
 
 iperf_str = "iperf" if args.iperf else ""

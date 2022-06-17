@@ -37,16 +37,16 @@ for i, y in enumerate(ys):
 	plt.plot(x, y, alpha=0.67, label=labels[i])
 
 
-plt.annotate("fair queuing", xy=(12.05, 23), xytext=(12.05, 10),
-            arrowprops=dict(arrowstyle="->"), horizontalalignment='center')
+# plt.annotate("fair queuing", xy=(82.05, 22), xytext=(82.05, 10),
+#             arrowprops=dict(arrowstyle="->"), horizontalalignment='center')
 
-plt.annotate("fair queuing", xy=(13.4, 23), xytext=(13.4, 10),
-            arrowprops=dict(arrowstyle="->"), horizontalalignment='center')
+# plt.annotate("fair queuing", xy=(83.5, 22), xytext=(83.5, 10),
+#             arrowprops=dict(arrowstyle="->"), horizontalalignment='center')
 
 plt.xlabel("Time (s)")
 plt.ylabel("Throughput (Mbit/s)")
 plt.ylim(bottom=0)
-plt.legend(loc="lower left")
+plt.legend(loc="lower right")
 plt.tight_layout()
-# plt.savefig("plots/bw.pdf", bbox_inches = 'tight', pad_inches = 0)
-# plt.show()
+plt.savefig("plots/bw.pdf", bbox_inches = 'tight', pad_inches = 0)
+plt.show()
