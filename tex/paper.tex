@@ -33,7 +33,7 @@
 Fair queuing is becoming increasingly prevalent in the internet and has been shown to improve performance in many circumstances. 
 Performance could be improved even more if endpoints could detect the presence of fair queuing on a certain path and adjust their congestion control accordingly. 
 If fair queuing is detected, the congestion control would not have to take cross traffic into account, which allows for more flexibility. 
-In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path. 
+In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path with very high accuracy. 
 When fair queuing is detected, a different congestion control can be chosen, which can result in reduced latency. 
 Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
 % We show that by adding fair queuing detection to an existing congestion control algorithm, queuing delay can be reduced by more than two thirds. 
@@ -69,7 +69,7 @@ This is in contrast to \autoref{fig:illustration_fq}, where both subflows have t
 
 \section{Background}
 
-When different applications send packets over the internet, one application can send more than the other and thus unfairly take a larger share of bandwidth. 
+When different applications send packets over the internet, one application can send more than the other and thus unfairly take a larger share of bandwidth. Also, a large queue can form if one flow sends more than it should. 
 This can result in unfairness and bad user experience. Several different approaches have been proposed to address this \cite{brown_future_2020,ware_beyond_2019}: One is to make sure every network flow is ``well-behaved'' (also known as TCP friendly). 
 Another one is to enforce fairness at switches and routers, called ``fair queuing'' or ``flow queuing'' \cite{nagle_packet_1985}. 
 
@@ -115,8 +115,9 @@ This can be measured by observing the \textit{delivery rate}
 \footnote{The delivery rate (a concept popularized by BBR \cite{cardwell_bbr_2016}) can be measured by observing the rate at which acknowledgement packets are sent back to the sender by the receiver.
 If the sender sends more than the link capacity, the delivery rate is never going to exceed the link capacity since the receiver cannot receive packets faster than the link capacity allows. 
 }
-of both subflows. If there is no fair queuing, the subflow which sends more also achieves a higher throughput (\autoref{fig:illustration_no_fq}), which can be considered unfair. 
+of both subflows. If there is no fair queuing, the subflow which sends more also achieves a higher throughput (\autoref{fig:illustration_no_fq}). 
 In this case, Tonopah doesn't behave different from a network flow which doesn't have fair queuing detection. 
+This can be a potential advantage which a Tonopah-enabled congestion control can have over other congestion control algorithms such as BBR, which has been shown to be unfair to other flows sometimes \cite{ware_modeling_2019}.
 
 By alternating which subflow is dominant and which one is non-dominant, we prevent the build-up of a standing queue at the bottleneck: 
 When the dominant subflow builds up a queue at the bottleneck link, it is going to be the non-dominant subflow in the next time interval and then it is going to send less and the queue is going to be reduced. 
@@ -128,7 +129,7 @@ Thanks to the use of Multipath QUIC \cite{liu_multipath_2022} the application do
 An interesting aspect of fair queuing detection is that the presence of fair queuing can be interpreted as a \textit{congestion signal}: 
 Only if there is congestion, fair queuing can be detected. If the link is underutilized, flows don't ``fight'' for bandwidh and thus fairness doesn't need to be enforced at the bottleneck link. 
 Thus, in this paper, we define a new congestion signal: The presence of fair queuing. Other already known congestion signals are, for example: 
-packet loss, queue length, change of queue length, Explicit Congestion Notification \cite{mathis_relentless_2009,hutchison_revisiting_2011}. 
+packet loss, queue length, change of queue length, Explicit Congestion Notification \cite{mathis_relentless_2009,hayes_revisiting_2011}. 
 
 \subsection{Details}
 
@@ -157,11 +158,11 @@ This worked well for our proof-of-concept implementation but one could also spec
 Tonopah was implemented on top of Picoquic in C. It was added on top of the NewReno congestion control algorithm but it could easily be added on top of other 
 congestion control algorithms as well. By basing our implementation on Picoquic, Tonopah also supports Explicit Congestion Notification. 
 
-We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.70GHz. 
+We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.7\,GHz. 
 By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
-We emulate the network using mininet and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing in \textit{fq} for fair queuing. 
-For evaluation we choose a network in which the sender is connected to the receiver via a switch (dumbbell topology). 
+We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing in \textit{fq} for fair queuing. 
+For evaluation we choose a network in which the sender is connected to the receiver via a switch. 
 
 All the source code and evaluation code of this paper are freely available (refer to the very top of this paper). 
 
@@ -169,6 +170,7 @@ In the following evaluations we always run each network flow for 90\,s. Tonopah 
 If in the evaluation scenario there is fair queuing and Tonopah detects fair queuing for 80\,s and fails to detect it for 10\,s, we 
 state the accuracy as $\frac{80}{90} = 89\%$. 
 We evaluate the performance of Tonopah over a range of delays from 10 to 100\,ms and link capacity from 10 to 100\,Mbit/s. 
+As the buffer size at the bottleneck we set the bandwidth delay product but at least 100 packets. 
 \begin{table}
 \begin{tabularx}{\columnwidth}{| l | X | X | X |}
 \hline
@@ -280,7 +282,7 @@ came to the conclusion that 10\,ms work best as the default target delay.
 
 We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy. 
 We also showed that it can work with alternative versions of fair queuing such as fq\_codel although accuracy depends on the configuration of the queue manager, 
-the link capacity, base delay etc. Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cocoa} \cite{bachl_cocoa_2019} or \textit{cake} \cite{hoiland-jorgensen_piece_2018}. 
+the link capacity, base delay etc. Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cocoa} \cite{bachl_cocoa_2019}, \textit{LFQ} \cite{bachl_lfq_2020} or \textit{cake} \cite{hoiland-jorgensen_piece_2018}. 
 
 Another potentially fruitful line of research would be to integrate Tonopah into other congestion control algorithms such as BBR. 
 
