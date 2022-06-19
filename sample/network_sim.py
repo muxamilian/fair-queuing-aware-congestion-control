@@ -39,7 +39,6 @@ class MyTopo(mininet.topo.Topo):
 
         # Add links
         self.addLink(leftHost, switch)
-        # self.addLink(leftHost, switch)
         self.addLink(switch, rightHost)
 
 topo = MyTopo()
@@ -68,13 +67,11 @@ bw_results = []
 delay_results = []
 results = []
 
-# for delay in (10, 50, 100):
-for delay in (50,):
+for delay in (10, 50, 100):
     bw_results.append([])
     delay_results.append([])
     results.append([])
-    # for rate in (10, 50, 100):
-    for rate in (50,):
+    for rate in (10, 50, 100):
         bw_results[-1].append([])
         delay_results[-1].append([])
         results[-1].append([])
@@ -87,9 +84,6 @@ for delay in (50,):
             print("delay", delay, "rate", rate, "rep_counter", rep_counter)
 
             opt = Opts()
-            # opt.qdisc = 'pfifo'
-            # opt.qdisc = 'fq_codel'
-            # opt.qdisc = 'fq'
             opt.qdisc = args.qdisc
             opt.delay = delay
             opt.rate = rate
@@ -100,10 +94,7 @@ for delay in (50,):
                 if with_delay:
                     print("bdp", bdp)
                 opt.buffer_size = None
-                # opt.buffer_size = int(1. * math.ceil(bdp))
-                # opt.buffer_size = 10
                 if opt.qdisc == 'pfifo' or opt.qdisc == 'fq':
-                    # opt.buffer_size = bdp
                     opt.buffer_size = max(100, bdp)
                 opt.interface = if_name
 
@@ -118,12 +109,8 @@ for delay in (50,):
                         if opt.buffer_size is not None: 
                             qdisc_string += f" flow_limit {int(opt.buffer_size)}"
                     elif opt.qdisc == 'fq_codel':
-                        # min_delay = (1500 * 8) / (rate * 10**6) * 100
-                        # fq_codel_delay = int(max(min_delay*1000, 10))
-                        # print('fq_codel_delay', fq_codel_delay)
                         fq_codel_delay = 10
                         qdisc_string = f"{opt.qdisc} target {fq_codel_delay}ms"
-                        # qdisc_string = f"{opt.qdisc}"
 
                 else:
                     qdisc_string = 'pfifo'
@@ -139,12 +126,9 @@ for delay in (50,):
                 return strings
 
             print([h1.cmd(item) for item in generate_tc_commands('h1-eth0', with_delay=True)])
-            # print([h1.cmd(item) for item in generate_tc_commands('h1-eth1')])
             print([h2.cmd(item) for item in generate_tc_commands('h2-eth0')])
             print([s1.cmd(item) for item in generate_tc_commands('s1-eth1', with_delay=True)])
             print([s1.cmd(item) for item in generate_tc_commands('s1-eth2')])
-            # print([s1.cmd(item) for item in generate_tc_commands('s1-eth3')])
-            # print(h1.cmd("ip addr add 192.168.0.3/24 brd 192.168.0.255 dev h1-eth1"))
 
             offloading_options = "gso off tso off gro off"
             print(h1.cmd("ethtool -K h1-eth0 " + offloading_options))
@@ -152,23 +136,13 @@ for delay in (50,):
             print(s1.cmd("ethtool -K s1-eth1 " + offloading_options))
             print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 
-            # mininet.cli.CLI(net)
-            # net.stop()
-            # quit()
-
-            # debug = {"stdout": None, "stderr": None}
             debug = {}
             os.environ["MAX_TIME"] = str(max_time)
             os.environ["CONGESTION_CONTROL"] = args.cc
 
             server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
             client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w logs/client.pcap (tcp || udp) and ip'.split(' '), **debug)
-            # server_tcpdump_popen = h2.popen(f'cat'.split(' '), **debug)
-            # client_tcpdump_popen = h1.popen(f'cat'.split(' '), **debug)
 
-            # server_popen = h2.popen('iperf3 -s -1'.split(' '), **debug)
-            # time.sleep(1)
-            # client_popen = h1.popen(f'iperf3 -c {h2.IP()}'.split(' '), **debug)
             server_popen = h2.popen(f'../picoquic_sample server 4433 ./ca-cert.pem ./server-key.pem ./server_files'.split(' '), **debug)
             if args.iperf:
                 iperf_server_popen = h1.popen(f'iperf3 -s'.split(' '), **{"stdout": None, "stderr": None})
@@ -176,7 +150,6 @@ for delay in (50,):
             if args.iperf:
                 iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **{"stdout": None, "stderr": None})
                 time.sleep(4)
-            # client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), env={'END_TIME': "10"}, **debug)
             client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), **{"stdout": None, "stderr": None})
 
             client_popen.communicate()
@@ -243,9 +216,9 @@ for delay in (50,):
             unexpected_cnxid = False
             for line in server_out.split("\n"):
                 if "Unexpected cnxid" in line:
-                    unexpected_cnxid = True
+                    uneected_cnxid = True
                     break
-                m = re.search("Tonopah: (Ending|Recovery|FQ detected) at ([0-9]+)", line)
+                m = re.searxpch("Tonopah: (Ending|Recovery|FQ detected) at ([0-9]+)", line)
                 if m:
                     if len(info) > 0 and info[-1][-1] == None:
                         break
@@ -259,9 +232,9 @@ for delay in (50,):
                     info.append((ts, value))
             print("info", info)
             correct_duration = 0.0
-            # if (unexpected_cnxid or len(info)-2 <= 0) and args.cc == "tonopah":
-            #     print("Got too few results...")
-            #     continue
+            if (unexpected_cnxid or len(info)-2 <= 0) and args.cc == "tonopah":
+                print("Got too few results...")
+                continue
             if len(info)-2 > 0 and args.cc == "tonopah":    
                 for i in range(len(info)-2):
                     assert info[i+1][1] is not None
@@ -273,19 +246,19 @@ for delay in (50,):
                 print("duration", duration, 'correct', correct_rate)
                 results[-1][-1].append(correct_rate)
 
-            # bw_string = """tshark -n -r logs/client.pcap -q -z io,stat,0.01,"BYTES()udp.srcport == 4433 || udp.srcport == 4434","BYTES()udp.srcport == 4433","BYTES()udp.srcport == 4434","BYTES()ip.src==192.168.0.2" | grep '<>' | awk '{print $2","$6}' | sudo -u max python plot_bandwidth.py"""
-            # output = subprocess.check_output(bw_string, shell=True).decode("utf-8")
-            # parsed_bw = float(output.strip().split(' ')[-1])
-            # print("bw", parsed_bw)
-            # bw_results[-1][-1].append(parsed_bw)
-            # delay_string = """cat logs/client.qlog | sudo -u max python plot_rtt.py"""
-            # output = subprocess.check_output(delay_string, shell=True).decode("utf-8")
-            # parsed_delay = float(output.strip().split(' ')[-1]) - delay
-            # print("delay", parsed_delay)
-            # delay_results[-1][-1].append(parsed_delay)
+            bw_string = """tshark -n -r logs/client.pcap -q -z io,stat,0.01,"BYTES()udp.srcport == 4433 || udp.srcport == 4434","BYTES()udp.srcport == 4433","BYTES()udp.srcport == 4434","BYTES()ip.src==192.168.0.2" | grep '<>' | awk '{print $2","$6}' | sudo -u max python plot_bandwidth.py"""
+            output = subprocess.check_output(bw_string, shell=True).decode("utf-8")
+            parsed_bw = float(output.strip().split(' ')[-1])
+            print("bw", parsed_bw)
+            bw_results[-1][-1].append(parsed_bw)
+            delay_string = """cat logs/client.qlog | sudo -u max python plot_rtt.py"""
+            output = subprocess.check_output(delay_string, shell=True).decode("utf-8")
+            parsed_delay = float(output.strip().split(' ')[-1]) - delay
+            print("delay", parsed_delay)
+            delay_results[-1][-1].append(parsed_delay)
 
             rep_counter += 1
-            quit()
+            # quit()
             # time.sleep(5)
 
 iperf_str = "iperf" if args.iperf else ""
