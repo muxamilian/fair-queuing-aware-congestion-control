@@ -14,11 +14,11 @@ To run the code, install `picquic` as described below.
 
 Also install `mininet` from mininets website. 
 
-Then, run run an experiment with our congestion control (Tonopah) with fair queuing like this: 
+Then, run an experiment with our congestion control (Tonopah) with fair queuing like this (to reproduce Table II): 
 
     sudo python3 sample/network_sim.py --qdisc fq --cc tonopah
     
-To run without fair queuing, run it like this:
+To run without fair queuing (reproducing Table I), run it like this:
 
     sudo python3 sample/network_sim.py --qdisc pfifo --cc tonopah
     
