@@ -79,7 +79,7 @@ for delay in (10, 50, 100):
         while True:
             subprocess.run('killall picoquic_sample'.split(' '))
             subprocess.run('killall iperf3'.split(' '))
-            if rep_counter >= 5:
+            if rep_counter >= 10:
                 break
             print("delay", delay, "rate", rate, "rep_counter", rep_counter)
 
