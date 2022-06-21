@@ -11,6 +11,8 @@
 \usepackage{subfig}
 \usepackage{tabularx}
 \usepackage{dblfloatfix}
+\usepackage{xurl}
+
 \renewcommand{\thefootnote}{\arabic{footnote}}
 \renewcommand{\thempfootnote}{\arabic{mpfootnote}}
 \begin{document}
@@ -272,7 +274,7 @@ To evaluate Tonopah's performance under crosstraffic, we use iperf with the NewR
 
 We also evaluated the performance of our fair queuing detection on a bottleneck managed by fq\_codel \cite{hoeiland-joergensen_flow_2018}. 
 We chose a default target queuing delay of 10\,ms following Apple's implementation\footnote{
-    \url{https://github.com/apple/darwin-xnu/blob/main/bsd/net/if.h\#L262}
+    \url{https://github.com/apple/darwin-xnu/blob/2ff845c2e033bd0ff64b5b6aa6063a1f8f65aa32/bsd/net/if.h\#L262}
 } because we argue that Apple probably spent a considerable amount of time fine-tuning their implementation and 
 came to the conclusion that 10\,ms work best as the default target delay. 
 
