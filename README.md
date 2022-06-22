@@ -26,7 +26,7 @@ You can also specify `fq_codel` as an alternative version of fair queuing.
     
 If you want to compare against NewReno or BBR, you can evaluate them like this:
 
-    sudo python3 sample/network_sim.py --qdisc <fq --cc <bbr,newreno>
+    sudo python3 sample/network_sim.py --qdisc fq --cc <bbr,newreno>
 
 ## Evaluation script
 
