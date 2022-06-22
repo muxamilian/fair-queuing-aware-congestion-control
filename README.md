@@ -28,6 +28,10 @@ If you want to compare against NewReno or BBR, you can evaluate them like this:
 
     sudo python3 sample/network_sim.py --qdisc <fq --cc <bbr,newreno>
 
+## Evaluation script
+
+For evaluation (calculating p-values, median accuracies etc.) there's a [Jupyter notebook](https://github.com/muxamilian/fair-queuing-aware-congestion-control/blob/master/sample/evaluation_playground.ipynb) which can be used. 
+
 # picoquic -- Original Readme
 
 Minimalist implementation of the QUIC protocol, as defined by the IETF.
