@@ -119,7 +119,7 @@ If the sender sends more than the link capacity, the delivery rate is never goin
 }
 of both subflows. If there is no fair queuing, the subflow which sends more also achieves higher throughput (\autoref{fig:illustration_no_fq}). 
 In this case, Tonopah doesn't behave different from a network flow which doesn't have fair queuing detection. 
-This can be a potential advantage which a Tonopah-enabled congestion control can have over other congestion control algorithms such as BBR, which has been shown to be unfair to other flows sometimes \cite{ware_modeling_2019}.
+This can be a potential advantage which a Tonopah-enabled congestion control can have over other congestion control algorithms such as BBR, which has been shown to be unfair to other flows sometimes \cite{ware_modeling_2019,hock_experimental_2017}.
 
 By alternating which subflow is dominant and which one is non-dominant, we prevent the build-up of a standing queue at the bottleneck: 
 When the dominant subflow builds up a queue at the bottleneck link, it is going to be the non-dominant subflow in the next time interval and then it is going to send less and the queue is going to be reduced. 
