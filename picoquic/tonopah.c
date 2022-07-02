@@ -52,8 +52,8 @@ typedef struct st_picoquic_tonopah_interval_info_t {
 
 #define INTERVALS_REQUIRED 4
 uint64_t minimum_interval = 50000;
-uint64_t maximum_interval = 100000;
-// uint64_t maximum_interval = 50000;
+// uint64_t maximum_interval = 100000;
+uint64_t maximum_interval = 50000;
 
 picoquic_tonopah_interval_info_t* interval_list_first = NULL;
 picoquic_tonopah_interval_info_t* interval_list_last = NULL;

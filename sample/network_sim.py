@@ -79,7 +79,7 @@ for delay in (10, 50, 100):
         while True:
             subprocess.run('killall picoquic_sample'.split(' '))
             subprocess.run('killall iperf3'.split(' '))
-            if rep_counter >= 10:
+            if rep_counter >= 5:
                 break
             print("delay", delay, "rate", rate, "rep_counter", rep_counter)
 
@@ -109,8 +109,9 @@ for delay in (10, 50, 100):
                         if opt.buffer_size is not None: 
                             qdisc_string += f" flow_limit {int(opt.buffer_size)}"
                     elif opt.qdisc == 'fq_codel':
-                        fq_codel_delay = 10
-                        qdisc_string = f"{opt.qdisc} target {fq_codel_delay}ms"
+                        # fq_codel_delay = 10
+                        # qdisc_string = f"{opt.qdisc} target {fq_codel_delay}ms"
+                        qdisc_string = f"{opt.qdisc}"
 
                 else:
                     qdisc_string = 'pfifo'
@@ -218,7 +219,7 @@ for delay in (10, 50, 100):
                 if "Unexpected cnxid" in line:
                     uneected_cnxid = True
                     break
-                m = re.searxpch("Tonopah: (Ending|Recovery|FQ detected) at ([0-9]+)", line)
+                m = re.search("Tonopah: (Ending|Recovery|FQ detected) at ([0-9]+)", line)
                 if m:
                     if len(info) > 0 and info[-1][-1] == None:
                         break
