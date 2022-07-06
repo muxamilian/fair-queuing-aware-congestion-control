@@ -12,7 +12,7 @@ We ran our experiments on Ubuntu 20.04 and for all software we used the official
 
 To run the code, install `picquic` as described below.
 
-Also install `mininet` from mininets website. 
+Also install `mininet` from mininet's website. 
 
 Then, run an experiment with our congestion control (Tonopah) with fair queuing like this (to reproduce Table II): 
 
