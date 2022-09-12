@@ -1,6 +1,3 @@
-#include "picoquic_internal.h"
-#include "picoquic_internal.h"
-
 /*
 * Author: Christian Huitema
 * Copyright (c) 2017, Private Octopus, Inc.
@@ -1432,7 +1429,7 @@ int picoquic_create_path(picoquic_cnx_t* cnx, uint64_t start_time, const struct 
             /* Initialize the MTU */
             path_x->send_mtu = (peer_addr == NULL || peer_addr->sa_family == AF_INET) ? PICOQUIC_INITIAL_MTU_IPV4 : PICOQUIC_INITIAL_MTU_IPV6;
             
-            // if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH) {
+            // if (cnx->congestion_alg->congestion_algorithm_number >= PICOQUIC_CC_ALGO_NUMBER_TONOPAH) {
                 path_x->send_mtu = 1440;
             // }
 
@@ -4059,6 +4056,9 @@ picoquic_congestion_algorithm_t const* picoquic_get_congestion_algorithm(char co
         }
         else if (strcmp(alg_name, "tonopah") == 0) {
             alg = picoquic_tonopah_algorithm;
+        }
+        else if (strcmp(alg_name, "new_tonopah") == 0) {
+            alg = picoquic_new_tonopah_algorithm;
         }
         else if (strcmp(alg_name, "cubic") == 0) {
             alg = picoquic_cubic_algorithm;

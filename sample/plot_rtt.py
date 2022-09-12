@@ -2,6 +2,7 @@ import numpy as np
 import fileinput
 import matplotlib.pyplot as plt
 import json
+import os
 import sys
 
 def add_plot(input_source):
@@ -24,7 +25,8 @@ def add_plot(input_source):
     x = x / 1_000_000
     y = y / 1000.
     print("mean rtt:", np.mean(y))
-    # plt.plot(x, y, alpha=0.67)
+    if 'DONT_PLOT' not in os.environ:
+        plt.plot(x, y)
 
 if len(sys.argv) <= 1:
     input_source = fileinput.input()
@@ -37,7 +39,8 @@ else:
         input_source_2 = f.readlines()
         add_plot(input_source_2)
 
-# plt.xlabel("Time (s)")
-# plt.ylabel("Delay (ms)")
-# plt.ylim(bottom=0)
-# plt.show()
+if 'DONT_PLOT' not in os.environ:
+    plt.xlabel("Time (s)")
+    plt.ylabel("Delay (ms)")
+    plt.ylim(bottom=0)
+    plt.show()

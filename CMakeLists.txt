@@ -76,6 +76,7 @@ set(PICOQUIC_LIBRARY_FILES
     picoquic/logwriter.c
     picoquic/newreno.c
     picoquic/tonopah.c
+    picoquic/new_tonopah.c
     picoquic/packet.c
     picoquic/performance_log.c
     picoquic/picohash.c

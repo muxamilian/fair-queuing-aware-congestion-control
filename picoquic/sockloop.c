@@ -114,7 +114,8 @@ int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE 
 {
     const char* congestion_control = getenv("CONGESTION_CONTROL");
     int nb_sockets = (local_af == AF_UNSPEC) ? 2 : 1;
-    if (strcmp(congestion_control, "tonopah") == 0 && local_port == 4433) {
+    if (strstr(congestion_control, "tonopah") && local_port == 4433) {
+        puts("Doubling sockets");
         nb_sockets *= 2;
     }
 

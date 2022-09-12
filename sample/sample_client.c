@@ -251,7 +251,7 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                     }
 
                     const char* congestion_control = getenv("CONGESTION_CONTROL");
-                    if (strcmp(congestion_control, "tonopah") == 0) {
+                    if (strstr(congestion_control, "tonopah")) {
 
                         if (!(cnx->is_simple_multipath_enabled)) {
                             puts("client: no multipath enabled!");
@@ -577,6 +577,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
             }
             if (congestion_control != NULL && strcmp(congestion_control, "tonopah") == 0) {
                 picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm); 
+            }
+            else if (congestion_control != NULL && strcmp(congestion_control, "new_tonopah") == 0) {
+                picoquic_set_default_congestion_algorithm(quic, picoquic_new_tonopah_algorithm); 
             }
             else if (congestion_control != NULL && strcmp(congestion_control, "bbr") == 0) {
                 picoquic_set_default_congestion_algorithm(quic, picoquic_bbr_algorithm); 

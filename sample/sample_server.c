@@ -429,6 +429,9 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
         if (congestion_control != NULL && strcmp(congestion_control, "tonopah") == 0) {
             picoquic_set_default_congestion_algorithm(quic, picoquic_tonopah_algorithm); 
         }
+        else if (congestion_control != NULL && strcmp(congestion_control, "new_tonopah") == 0) {
+            picoquic_set_default_congestion_algorithm(quic, picoquic_new_tonopah_algorithm); 
+        }
         else if (congestion_control != NULL && strcmp(congestion_control, "bbr") == 0) {
             picoquic_set_default_congestion_algorithm(quic, picoquic_bbr_algorithm); 
         }

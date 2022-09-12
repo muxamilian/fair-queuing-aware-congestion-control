@@ -13,6 +13,15 @@ import subprocess
 import re
 import argparse
 import numpy as np
+import atexit
+
+def killall():
+    subprocess.run('killall iperf3'.split(' '))
+    subprocess.run('killall picoquic_sample'.split(' '))
+
+atexit.register(killall)
+
+print("Enabling ECN", subprocess.check_output('sysctl -w net.ipv4.tcp_ecn=1'.split(' ')).decode('utf-8'))
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--qdisc', type=str, default='fq')
@@ -45,6 +54,8 @@ topo = MyTopo()
 net = mininet.net.Mininet(topo=topo, link=mininet.link.TCLink, ipBase='192.168.0.0/24')
 net.start()
 
+# mininet.cli.CLI(net)
+
 time.sleep(2)
 
 mininet.util.dumpNodeConnections(net.hosts)
@@ -57,6 +68,7 @@ s1: mininet.node.Host = net.get('s1')
 
 os.chdir(os.path.dirname(__file__))
 os.makedirs('logs', exist_ok=True)
+os.makedirs('results', exist_ok=True)
 
 class Opts:
     pass
@@ -67,11 +79,16 @@ bw_results = []
 delay_results = []
 results = []
 
+max_reps = 10
+os.environ['DONT_PLOT'] = '1'
+
 for delay in (10, 50, 100):
+# for delay in (100,):
     bw_results.append([])
     delay_results.append([])
     results.append([])
     for rate in (10, 50, 100):
+    # for rate in (100,):
         bw_results[-1].append([])
         delay_results[-1].append([])
         results[-1].append([])
@@ -79,7 +96,7 @@ for delay in (10, 50, 100):
         while True:
             subprocess.run('killall picoquic_sample'.split(' '))
             subprocess.run('killall iperf3'.split(' '))
-            if rep_counter >= 5:
+            if rep_counter >= max_reps:
                 break
             print("delay", delay, "rate", rate, "rep_counter", rep_counter)
 
@@ -88,11 +105,12 @@ for delay in (10, 50, 100):
             opt.delay = delay
             opt.rate = rate
 
+            bdp = (opt.delay/1000 * opt.rate*1000000)/(1500*8)
+            print("bdp", bdp)
+
             def generate_tc_commands(if_name, with_delay=False):
                 global opt
                 bdp = (opt.delay/1000 * opt.rate*1000000)/(1500*8)
-                if with_delay:
-                    print("bdp", bdp)
                 opt.buffer_size = None
                 if opt.qdisc == 'pfifo' or opt.qdisc == 'fq':
                     opt.buffer_size = max(100, bdp)
@@ -138,10 +156,11 @@ for delay in (10, 50, 100):
             print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 
             debug = {}
+            # debug = {"stdout": None, "stderr": None}
             os.environ["MAX_TIME"] = str(max_time)
             os.environ["CONGESTION_CONTROL"] = args.cc
 
-            server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
+            # server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
             client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w logs/client.pcap (tcp || udp) and ip'.split(' '), **debug)
 
             server_popen = h2.popen(f'../picoquic_sample server 4433 ./ca-cert.pem ./server-key.pem ./server_files'.split(' '), **debug)
@@ -151,8 +170,8 @@ for delay in (10, 50, 100):
             if args.iperf:
                 iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **{"stdout": None, "stderr": None})
                 time.sleep(4)
-            client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), **{"stdout": None, "stderr": None})
 
+            client_popen = h1.popen(f'../picoquic_sample client {h2.IP()} 4433 ./ 100M.bin'.split(' '), **{"stdout": None, "stderr": None})
             client_popen.communicate()
 
             if args.iperf:
@@ -179,12 +198,12 @@ for delay in (10, 50, 100):
 
             time.sleep(5)
 
-            server_tcpdump_popen.terminate()
-            out, err = server_tcpdump_popen.communicate()
-            if out:
-                print("server_tcpdump out", out.decode("utf-8"))
-            if err:
-                print("server_tcpdump err", err.decode("utf-8"))
+            # server_tcpdump_popen.terminate()
+            # out, err = server_tcpdump_popen.communicate()
+            # if out:
+            #     print("server_tcpdump out", out.decode("utf-8"))
+            # if err:
+            #     print("server_tcpdump err", err.decode("utf-8"))
 
             client_tcpdump_popen.terminate()
             out, err = client_tcpdump_popen.communicate()
@@ -217,7 +236,7 @@ for delay in (10, 50, 100):
             unexpected_cnxid = False
             for line in server_out.split("\n"):
                 if "Unexpected cnxid" in line:
-                    uneected_cnxid = True
+                    unexpected_cnxid = True
                     break
                 m = re.search("Tonopah: (Ending|Recovery|FQ detected) at ([0-9]+)", line)
                 if m:
@@ -233,10 +252,13 @@ for delay in (10, 50, 100):
                     info.append((ts, value))
             print("info", info)
             correct_duration = 0.0
-            if (unexpected_cnxid or len(info)-2 <= 0) and args.cc == "tonopah":
+            if unexpected_cnxid and "tonopah" in args.cc:
+                print("Unexpected cnxid error...")
+                continue
+            if len(info)-2 <= 0 and "tonopah" in args.cc:
                 print("Got too few results...")
                 continue
-            if len(info)-2 > 0 and args.cc == "tonopah":    
+            if len(info)-2 > 0 and "tonopah" in args.cc:    
                 for i in range(len(info)-2):
                     assert info[i+1][1] is not None
                     if info[i+1][1] == ('fq' in opt.qdisc):
@@ -247,36 +269,33 @@ for delay in (10, 50, 100):
                 print("duration", duration, 'correct', correct_rate)
                 results[-1][-1].append(correct_rate)
 
-            bw_string = """tshark -n -r logs/client.pcap -q -z io,stat,0.01,"BYTES()udp.srcport == 4433 || udp.srcport == 4434","BYTES()udp.srcport == 4433","BYTES()udp.srcport == 4434","BYTES()ip.src==192.168.0.2" | grep '<>' | awk '{print $2","$6}' | sudo -u max python plot_bandwidth.py"""
+            bw_string = """tshark -n -r logs/client.pcap -q -z io,stat,0.01,"BYTES()udp.srcport == 4433 || udp.srcport == 4434","BYTES()udp.srcport == 4433","BYTES()udp.srcport == 4434","BYTES()ip.src==192.168.0.2" | grep '<>' | awk '{print $2","$6}' | sudo -E -u max python plot_bandwidth.py"""
             output = subprocess.check_output(bw_string, shell=True).decode("utf-8")
             parsed_bw = float(output.strip().split(' ')[-1])
             print("bw", parsed_bw)
             bw_results[-1][-1].append(parsed_bw)
-            delay_string = """cat logs/client.qlog | sudo -u max python plot_rtt.py"""
+            delay_string = """cat logs/client.qlog | sudo -E -u max python plot_rtt.py"""
             output = subprocess.check_output(delay_string, shell=True).decode("utf-8")
             parsed_delay = float(output.strip().split(' ')[-1]) - delay
             print("delay", parsed_delay)
             delay_results[-1][-1].append(parsed_delay)
 
             rep_counter += 1
-            # quit()
-            # time.sleep(5)
+            time.sleep(5)
 
-iperf_str = "iperf" if args.iperf else ""
+iperf_str = "_iperf" if args.iperf else ""
 
 print("results", results)
-with open('results_'+args.qdisc+'_'+args.cc+'.txt', "w") as f:
+with open('results/results_'+args.qdisc+'_'+args.cc+iperf_str+'.txt', "w") as f:
     f.write(str(results))
 
 print("bw_results", bw_results, 'mean', np.mean(np.array(bw_results)))
-with open('bw_results_'+args.qdisc+'_'+args.cc+'.txt', "w") as f:
+with open('results/bw_results_'+args.qdisc+'_'+args.cc+iperf_str+'.txt', "w") as f:
     f.write(str(bw_results))
 
 print("delay_results", delay_results, 'mean', np.mean(np.array(delay_results)))
-with open('delay_results_'+args.qdisc+'_'+args.cc+'.txt', "w") as f:
+with open('results/delay_results_'+args.qdisc+'_'+args.cc+iperf_str+'.txt', "w") as f:
     f.write(str(delay_results))
 
-# mininet.cli.CLI(net)
 net.stop()
-# print("\a")
 

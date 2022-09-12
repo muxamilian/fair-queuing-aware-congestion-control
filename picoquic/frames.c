@@ -2276,7 +2276,7 @@ uint64_t picoquic_compute_ack_delay_max(picoquic_cnx_t* cnx, uint64_t rtt, uint6
 void picoquic_compute_ack_gap_and_delay(picoquic_cnx_t* cnx, uint64_t rtt, uint64_t remote_min_ack_delay,
     uint64_t data_rate, uint64_t* ack_gap, uint64_t* ack_delay_max)
 {
-    if (cnx->congestion_alg->congestion_algorithm_number == PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
+    if (cnx->congestion_alg->congestion_algorithm_number >= PICOQUIC_CC_ALGO_NUMBER_TONOPAH && cnx->nb_paths == 2) {
         *ack_gap = 1;
         *ack_delay_max = 10000ull;
         return;
