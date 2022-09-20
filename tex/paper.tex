@@ -36,9 +36,7 @@ Fair queuing is becoming increasingly prevalent in the internet and has been sho
 Performance could be improved even more if endpoints could detect the presence of fair queuing on a certain path and adjust their congestion control accordingly. 
 If fair queuing is detected, the congestion control would not have to take cross traffic into account, which allows for more flexibility. 
 In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path, with very high accuracy. 
-When fair queuing is detected, a different congestion control can be chosen, which can result in reduced latency. 
-Unlike an algorithm proposed in a previous paper of us, the approach presented here does not only detect the presence of fair queuing once at flow startup but it does so continuously. 
-% We show that by adding fair queuing detection to an existing congestion control algorithm, queuing delay can be reduced by more than two thirds. 
+When fair queuing is detected, a different congestion control can be chosen, which can result in reduced latency. In case fair queuing is detected, each flow can specify how much queuing delay it allows, meaning that each flow can choose its own tradeoff between throughput and latency. 
 \end{abstract}
 
 % \begin{IEEEkeywords}
@@ -47,25 +45,15 @@ Unlike an algorithm proposed in a previous paper of us, the approach presented h
 
 \begin{figure}[h]
 \centering
-\subfloat[\footnotesize \textbf{Sending} rate at the sender (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_fq"}.pdf}
-\label{fig:sender}}\\
-\subfloat[\footnotesize \textbf{Receiving} rate at the receiver (fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_fq"}.pdf}
-\label{fig:receiver}}
-\caption{Figure \ref{fig:sender} shows the sending rate, \ref{fig:receiver} the receiving rate of an example flow in case there's \textbf{fair queuing}. 
-Around second 82, the total sending rate is exceeding the link capacity -- 50 Mbit/s -- and fair queuing starts to limit the throughput of the subflow that is sending more. 
-Thus, in the lower figure, the dominant subflow (the one that is sending more) and the non-dominant subflow achieve approx.~the same receiving rate even though the dominant subflow sends more. This is the effect of fair queuing.}
+\includegraphics[width=\columnwidth]{{"../sample/plots/concept_fq"}.pdf}
+\caption{In case there is \textbf{fair queuing}, when the bottleneck link is congested, subflow 1, which sends more, sees increasing queuing delay. Subflow 2 doesn't see increased queuing delay as it sends less than its fair share and thus its packets don't have to wait at the bottleneck link.}
 \label{fig:illustration_fq}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\subfloat[\footnotesize \textbf{Sending} rate at the sender (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_server_pfifo"}.pdf}
-\label{fig:sender_pfifo}}\\
-\subfloat[\footnotesize \textbf{Receiving} rate at the receiver (no fair queuing)]{\includegraphics[width=\columnwidth]{{"figures/bw_client_pfifo"}.pdf}
-\label{fig:receiver_pfifo}}
-\caption{Figure \ref{fig:sender_pfifo} shows the sending rate, \ref{fig:receiver_pfifo} the receiving rate of an example flow in case there's \textbf{no fair queuing}. 
-Even though the sender sends too much and a queue builds up, still the subflow that sends more data also has a higher receiving rate. 
-This is in contrast to \autoref{fig:illustration_fq}, where both subflows have the same receiving rate once there is congestion at the bottleneck, thanks to fair queuing. }
+\includegraphics[width=\columnwidth]{{"../sample/plots/concept_fcfs"}.pdf}
+\caption{In case there is \textbf{no fair queuing}, when the bottleneck link is congested, a queue builds up. Since both subflows share the same queue, they both see increased queuing delay.}
 \label{fig:illustration_no_fq}
 \end{figure}    
 
