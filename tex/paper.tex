@@ -89,6 +89,7 @@ We would thus like to have an approach which
     \item \textbf{continuously checks} for the presence or absence of fair queuing, not only at flow startup. 
     \item \textbf{doesn't cause packet loss} while trying to determine if there is fair queuing or not. 
     \item can be \textbf{transparently used} on top of any congestion control algorithm. 
+    \item lets each application \textbf{choose how much delay} it allows in case fair queuing is detected. Allowing a higher delay can result in higher throughput. 
 \end{itemize} 
 
 \section{Concept}
@@ -97,45 +98,27 @@ Our new approach presented here is a mechanism which performs measurements to de
 The approach of performing measurements in congestion control became popular in the last couple of years and was already followed by \cite{cardwell_bbr_2016,dong_pcc_2015,goyal_elasticity_2020,hayes_online_2020}.
 
 The core concept of our approach, which we call \textbf{\textit{Tonopah}}, is that a network flow is separated into \textbf{two subflows}. 
-\textbf{Alternatingly}, one flow sends more (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). 
-After a certain time interval the dominant subflow becomes the non-dominant one and vice versa. 
+One flow constantly sends more data (\textbf{dominant subflow}), while the other one sends less (\textbf{non-dominant subflow}). 
 When the total sending rate reaches the link capacity and fair queuing is present, 
 \textbf{fair queuing} is going to \textbf{limit} the throughput of the \textbf{dominant subflow} (\autoref{fig:illustration_fq}). 
-This can be measured by observing the \textit{delivery rate}
-\footnote{The delivery rate (a concept popularized by BBR \cite{cardwell_bbr_2016}) can be measured by observing the rate at which acknowledgement packets are sent back to the sender by the receiver.
-If the sender sends more than the link capacity, the delivery rate is never going to exceed the link capacity since the receiver cannot receive packets faster than the link capacity allows. 
-}
-of both subflows. If there is no fair queuing, the subflow which sends more also achieves higher throughput (\autoref{fig:illustration_no_fq}). 
+Since its throughput is limited, a queue is going to build up and delay is going to increase. If the delay only increases for the dominant subflow but not for the non-dominant one, this means that there's fair queuing. 
+
+On the other side, if there is no fair queuing, when the sending rate exceeds the capacity of the bottleneck link, a queuing is going to build up and queuing delay is going to rise for \textbf{both} the dominant and the non-dominant subflow (\autoref{fig:illustration_no_fq}). 
 In this case, Tonopah doesn't behave different from a network flow which doesn't have fair queuing detection. 
 This can be a potential advantage which a Tonopah-enabled congestion control can have over other congestion control algorithms such as BBR, which has been shown to be unfair to other flows sometimes \cite{ware_modeling_2019,hock_experimental_2017}.
-
-By alternating which subflow is dominant and which one is non-dominant, we prevent the build-up of a standing queue at the bottleneck: 
-When the dominant subflow builds up a queue at the bottleneck link, it is going to be the non-dominant subflow in the next time interval and then it is going to send less and the queue is going to be reduced. 
-
-The congestion window of the flow applies to both subflows together. This means that while always the dominant subflow sends more than the non-dominant one, in sum they never send more than what is allowed by the congestion window.
 
 Thanks to the use of Multipath QUIC \cite{liu_multipath_2022} the application does not see any difference because all data are recombined to one flow by Multipath QUIC. 
 
 An interesting aspect of fair queuing detection is that the presence of fair queuing can be interpreted as a \textit{congestion signal}: 
-Only if there is congestion, fair queuing can be detected. If the link is underutilized, flows don't ``fight'' for bandwidh and thus fairness doesn't need to be enforced at the bottleneck link. 
+Only if there is congestion, fair queuing can be detected. If the link is underutilized, flows don't ``fight'' for bandwidth and thus fairness doesn't need to be enforced at the bottleneck link. 
 Thus, in this paper, we define a new congestion signal: The presence of fair queuing. Other already known congestion signals are, for example: 
 packet loss, queue length, change of queue length, Explicit Congestion Notification \cite{mathis_relentless_2009,hayes_revisiting_2011}. 
 
 \subsection{Details}
 
-The dominant subflow receives $\frac{6}{10}$ of the total allowed sending rate, while the non-dominant one receives $\frac{4}{10}$. 
-The dominant subflow and the non-dominant subflow alternate every $\max{(50, \min{(100, \textit{rtt})})}$ milliseconds. 
-This time period is also called an \textbf{\textit{interval}}. To determine the presence of fair queuing, the data of the last four intervals are evaluated. 
-We look at more than one interval because this reduces the effect of measurement noise. We found four intervals to be a suitable number. 
+The dominant subflow receives $\frac{2}{3}$ of the total allowed sending rate, while the non-dominant one receives the remaining $\frac{1}{3}$. 
 
-We determine that fair queuing is present if the receiving rate was more fair than not fair. 
-It would be completely fair if both flows get $\frac{1}{2}$ of the total throughput. It would be completely unfair if the dominant subflow got $\frac{6}{10}$ and the non-dominant one $\frac{4}{10}$. 
-If the dominant one got a fraction of 0.549 of the total throughput, it would be just a little bit more fair than unfair. In this case we would say that there is fair queuing. 
-If, on the other side, the dominant subflow got a fraction of 0.551 of the total throughput, we would say that there is no fair queuing. 
-
-Another safeguard against measurement noise is that Tonopah only take a decision regarding fair queuing if the dominant flow actually really sent more data than the non-dominant one. 
-Specifically, if the dominant flow sends a fraction of throughput smaller than 0.575, Tonopah doesn't take a decision because it means that probably there wasn't enough data to send. 
-This case only occurs when the underlying application has no data to send or when the sending rate is very low ($<$ 10\,Mbit/s). 
+After each round-trip time, Tonopah checks if the queuing delay of dominant subflow was on average larger than the one of the non-dominant subflow. As the threshold we use 5\,ms: If the average queuing delay in the last round-trip time was 5\,ms higher for the dominant subflow compared to the non-dominant one, fair queuing is detected. However, it is worth noting that each application can choose this threshold individually. For example, a cloud gaming application might choose a threshold of 5\,ms and thus prioritize low delay over high throughput. However, a video chat application might want to emphasize high bandwidth more and thus choose a threshold of 20\,ms to get maximum throughput. 
 
 Both subflows are controlled by the same congestion window. The differences in sending rates are achieved by using pacing. 
 The basis of the implementation of Tonopah is \textit{Picoquic}\footnote{\url{https://github.com/private-octopus/picoquic/tree/master/picoquic}}. 
