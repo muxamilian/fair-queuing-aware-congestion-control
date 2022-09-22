@@ -144,36 +144,34 @@ If in the evaluation scenario there is fair queuing and Tonopah detects fair que
 state the accuracy as $\frac{80}{90} = 89\%$. 
 We evaluate the performance of Tonopah over a range of delays from 10 to 100\,ms and link capacity from 10 to 100\,Mbit/s in a grid-like fashion. 
 For each combination of delay and link capacity, multiple experiment runs are performed and the median, the quartiles or the average of the results are shown. 
-As the buffer size at the bottleneck we set the bandwidth delay product but at least 100 packets. 
+As the buffer size at the bottleneck we set the bandwidth delay product but at least 100 packets when no fair queuing (pfifo) is used. When using fq for fair queuing, we set the buffer size for each flow using the same rule. When using fair queuing with fq\_codel, we use it in its default configuration. 
 
 \subsection{Detection accuracy}
 
-\begin{table}
-\begin{tabularx}{\columnwidth}{| l | X | X | X |}
-\hline
-& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
-10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
-50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-\end{tabularx}
-\caption{Detection accuracy in case there's \textbf{no fair queuing}.  The overall median accuracy (true negative rate) is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
-\label{table:no_fq}
-\end{table}
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{{"../sample/plots/results_pfifo_new_tonopah_all"}.pdf}
+\caption{Detection accuracy in case there's \textbf{no fair queuing} (pfifo). The overall accuracy is 99.4\%.}
+\label{fig:no_fq}
+\end{figure}
 
-\begin{table}
-\begin{tabularx}{\columnwidth}{| l | X | X | X |}
-\hline
-& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
-10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 99\% \newline 3rd quart.: 100\%\\ \hline
-50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-\end{tabularx}
-\caption{Detection accuracy in case there is \textbf{fair queuing}.  The overall median accuracy (true positive rate) is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
-\label{table:fq}
-\end{table}    
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{{"../sample/plots/results_fq_codel_new_tonopah_all"}.pdf}
+\caption{Detection accuracy in case there is \textbf{fair queuing} (fq\_codel). The overall accuracy is 95.8\%.}
+\label{fig:fq_codel}
+\end{figure}    
 
-\autoref{table:no_fq} shows that if there is no fair queuing, Tonopah detects this correctly virtually always (true negative rate $\geq$99\%). 
-If there is fair queuing (\autoref{table:fq}), Tonopah detects this correctly very often but not in every case (true positive rate in the high 90s). 
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{{"../sample/plots/results_fq_new_tonopah_all"}.pdf}
+\caption{Detection accuracy in case there is \textbf{fair queuing} (fq). The overall accuracy is 95.4\%.}
+\label{fig:fq}
+\end{figure}        
+
+\autoref{fig:no_fq} shows that if there is no fair queuing, Tonopah detects this correctly virtually always. 
+If there is fair queuing with fq\_codel (\autoref{fig:fq_codel}) or fq (\autoref{fig:fq}), Tonopah detects this correctly very often but not in every case. 
+
 
 \subsection{Throughput and Queuing Delay of Tonopah}
 
@@ -183,16 +181,14 @@ If there is fair queuing (\autoref{table:fq}), Tonopah detects this correctly ve
 \begin{tabular}{| r | r | r |}
 \hline
 & Link utilization & Queuing delay \\ \hline
-NewReno & 95.6\% & 33.6 ms \\ \hline
-Tonopah & 94.3\% & 10.5 ms \\ \hline
-% p-value\protect\footnote{Using Welch's t-test} & 0.86 & $1.9 \times 10^{-6}$ \\ \hline
-% $\frac{\text{NewReno}}{\text{Tonopah}}$ & 103\% & 321\% \\ \hline
+NewReno & 95.6\% & 36.5 ms \\ \hline
+Tonopah & 91.1\% & 3.3 ms \\ \hline
 \end{tabular}
-\caption{NewReno's link utilization is 103\% Tonopah's. 
-But the \textbf{queuing delay} of NewReno is \textbf{321\%} Tonopah's. 
-This means that Tonopah can deliver the same throughput while causing a lot less queuing delay. 
-The differences in \textbf{queuing delay} are \textbf{highly significant} (p-value\protect\footnote{Using Welch's t-test} $< 10^{-5}$). 
-The experiment setup is the same as in \autoref{table:fq}. }
+\caption{NewReno's link utilization is 105\% Tonopah's. 
+But the \textbf{queuing delay} of NewReno is \textbf{1111\%} Tonopah's. 
+This means that Tonopah can deliver the same or slightly less throughput while causing a lot less queuing delay. 
+The differences in \textbf{queuing delay} are \textbf{highly significant} (p-value (Welch's t-test) $< 10^{-21}$). 
+The experiment setup is the same as in \autoref{fig:fq}. }
 \label{table:throughput_and_delay}
 \end{minipage}
 \end{table}    
@@ -204,83 +200,22 @@ However, we want to emphasize that Tonopah is not a congestion control algorithm
 
 \subsection{Cross-traffic}
 
-\begin{table}
-\begin{tabularx}{\columnwidth}{| l | X | X | X |}
-\hline
-& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
-10ms & Median: 99\% \newline 1st quart.: 98\% \newline 3rd quart.: 99\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
-50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 98\% \newline 3rd quart.: 100\% \\ \hline
-\end{tabularx}
-\caption{Detection accuracy in case there's \textbf{no fair queuing} under the presence of \textbf{cross-traffic}. The overall median accuracy (true negative rate) is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
-\label{table:no_fq_crosstraffic}
-\end{table}
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{{"../sample/plots/results_pfifo_new_tonopah_iperf_all"}.pdf}
+\caption{Detection accuracy in case there's \textbf{no fair queuing} under the presence of \textbf{cross-traffic}. The overall accuracy is 99.9\%.}
+\label{fig:no_fq_crosstraffic}
+\end{figure}
 
-\begin{table}
-\begin{tabularx}{\columnwidth}{| l | X | X | X |}
-\hline
-& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
-10ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
-50ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-100ms & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% \\ \hline
-\end{tabularx}
-\caption{Detection accuracy in case there is \textbf{fair queuing} under the presence of \textbf{cross-traffic}.  The overall median accuracy (true positive rate) is 100\%, the first quartile is 100\% and the third quartile is 100\%.}
-\label{table:fq_crosstraffic}
-\end{table}        
-
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{{"../sample/plots/results_fq_new_tonopah_iperf_all"}.pdf}
+\caption{Detection accuracy in case there is \textbf{fair queuing} (fq) under the presence of \textbf{cross-traffic}. The overall accuracy is 98.1\%.}
+\label{fig:fq_crosstraffic}
+\end{figure}    
+    
 To evaluate Tonopah's performance under crosstraffic, we use iperf with the NewReno congestion control. We start iperf 4\,s before Tonopah so that it has time to saturate the link. 
-\autoref{table:no_fq_crosstraffic} and \autoref{table:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged. 
-
-\subsection{Other variants of fair queuing: fq\_codel}
-
-\begin{table}
-\begin{tabularx}{\columnwidth}{| l | X | X | X |}
-\hline
-& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
-10ms & Median: 85\% \newline 1st quart.: 84\% \newline 3rd quart.: 85\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
-50ms & Median: 91\% \newline 1st quart.: 88\% \newline 3rd quart.: 92\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 98\% \newline 1st quart.: 97\% \newline 3rd quart.: 99\% \\ \hline
-100ms & Median: 9\% \newline 1st quart.: 7\% \newline 3rd quart.: 13\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\% & Median: 64\% \newline 1st quart.: 0\% \newline 3rd quart.: 75\% \\ \hline
-\end{tabularx}
-\caption{Detection accuracy in case there is the \textbf{\textit{fq\_codel}} variant of \textbf{fair queuing} with a target delay of 10\,ms. The overall median accuracy (true positive rate) is 95\%, the first quartile is 83\% and the third quartile is 100\%.}
-\label{table:fq_codel}
-\end{table}        
-
-We also evaluated the performance of our fair queuing detection on a bottleneck managed by fq\_codel \cite{hoeiland-joergensen_flow_2018}. 
-We chose a default target queuing delay of 10\,ms following Apple's implementation\footnote{
-    \url{https://github.com/apple/darwin-xnu/blob/2ff845c2e033bd0ff64b5b6aa6063a1f8f65aa32/bsd/net/if.h\#L262}
-} because we argue that Apple probably spent a considerable amount of time fine-tuning their implementation and 
-came to the conclusion that 10\,ms work best as the default target delay. 
-Also, Apple's implementation of fq\_codel seems to be the most widespread worldwide\footnote{\url{https://blog.cerowrt.org/post/state_of_fq_codel/}} with currently two billion Apple devices presumably supporting Apple's fq\_codel. 
-
-\autoref{table:fq_codel} shows that Tonopah doesn't detect fair queuing as well when there's fq\_codel compared to when there is fq. 
-However, median detection accuracy (true positive rate) is still reasonably high at 95\%.
-
-\subsubsection{fq\_codel with a target delay of 5\,ms}
-
-\begin{table}
-\begin{tabularx}{\columnwidth}{| l | X | X | X |}
-\hline
-& 10 Mbit/s & 50 Mbit/s & 100 Mbit/s \\ \hline
-10ms & Median: 39\% \newline 1st quart.: 37\% \newline 3rd quart.: 80\% & Median: 100\% \newline 1st quart.: 99\% \newline 3rd quart.: 100\% & Median: 100\% \newline 1st quart.: 100\% \newline 3rd quart.: 100\%\\ \hline
-50ms & Median: 36\% \newline 1st quart.: 36\% \newline 3rd quart.: 36\% & Median: 100\% \newline 1st quart.: 99\% \newline 3rd quart.: 100\% & Median: 99\% \newline 1st quart.: 98\% \newline 3rd quart.: 99\% \\ \hline
-100ms & Median: 16\% \newline 1st quart.: 14\% \newline 3rd quart.: 17\% & Median: 99\% \newline 1st quart.: 98\% \newline 3rd quart.: 100\% & Median: 97\% \newline 1st quart.: 64\% \newline 3rd quart.: 99\% \\ \hline
-\end{tabularx}
-\caption{Detection accuracy in case there is the \textbf{\textit{fq\_codel}} variant of \textbf{fair queuing} with a target delay of 5\,ms. The overall median accuracy (true positive rate) is 98\%, the first quartile is 37\% and the third quartile is 100\%.}
-\label{table:fq_codel_linux}
-\end{table}            
-
-Although Apple's fq\_codel implementation with its 10\,ms default target delay seems to be the most widespread, fq\_codel is also the default queuing manager on multiple Linux distributions. 
-On Linux, fq\_codel has a default target delay of 5\,ms, half of Apple's value of 10. 
-
-Since the target delay of 5\,ms is quite small, we had to slightly modify Tonopah: We fixed the interval of Tonopah to 50\,ms. 
-As a reminder, the interval is the time duration after which the dominant subflow becomes the non-dominant one and vice versa. 
-As a reminder, for the previous experiments, the interval was the current round trip time but at least 50\,ms and no more than 100\,ms. 
-
-\autoref{table:fq_codel_linux} shows the performance of Tonopah with Linux's implementation of fq\_codel. Median detection accuracy (true positive rate) is 98\%. 
-A problem is that accuracy is pretty low for small bandwidths ($\leq$10\,Mbit/s) but otherwise fair queuing can be recognized quite accurately. 
-
-Since we changed how Tonopah works to make it work better with Linux's implementation of fq\_codel by setting the interval to 50\,ms, we also have to make sure that this modification didn't lower the true negative rate (accuracy in case there is no fair queuing). 
-Our experiments show that with the constant 50\,ms interval Tonopah even works slightly better, giving a true negative rate of 100\%, meaning it can always detect the absence of fair queuing correctly.  
+\autoref{fig:no_fq_crosstraffic} and \autoref{fig:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged or even slightly better. We tried to use fq\_codel as in \autoref{fig:fq} but we encountered problems when using fq\_codel in combination with iperf3. Frequently, iperf3 would lose all packets, have a timeout after a couple of seconds and stop. Since we could not resolve this issue, we used fq instead of fq\_codel, for which this issue didn't occur. For fq, we set the buffer to the same size as for pfifo (1 bandwidth delay product but at least 100 packets). 
 
 \section{Discussion}
 
@@ -292,7 +227,7 @@ Another potentially fruitful line of research would be to integrate Tonopah into
 
 \section*{Acknowledgements}
 
-We thank Sebastian Moeller, who suggested to also include experiments with fq\_codel with a target value of 5\,ms, which is the default on Linux. 
+We thank Sebastian Moeller, who suggested to add CDF plots and to use fq\_codel with a target value of 5\,ms, which is the default on Linux. 
 
 \bibliographystyle{ieeetr}
 \bibliography{fair-queuing-aware-congestion-control}
