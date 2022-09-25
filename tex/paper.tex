@@ -44,15 +44,23 @@ When fair queuing is detected, a different congestion control can be chosen, whi
 % \end{IEEEkeywords}
 
 \begin{figure}[h]
-\centering
+\centering 
+\subfloat[\footnotesize A host sending data to a receiver. There is a bottleneck link with a switch which applies \textbf{fair queuing}.]{\includegraphics[width=\columnwidth]{{"figures/fq"}.pdf}
+\label{fig:fq_overview}}\\
+\subfloat[\footnotesize Queuing delay in case of \textbf{fair queuing}.]{
 \includegraphics[width=\columnwidth]{{"../sample/plots/concept_fq"}.pdf}
+\label{fig:fq_detail}}
 \caption{In case there is \textbf{fair queuing}, when the bottleneck link is congested, subflow 1, which sends more, sees increasing queuing delay. Subflow 2 doesn't see increased queuing delay as it sends less than its fair share and thus its packets don't have to wait at the bottleneck link.}
 \label{fig:illustration_fq}
 \end{figure}
 
 \begin{figure}[h]
 \centering
+\subfloat[\footnotesize A host sending data to a receiver. There is a bottleneck link with a switch which applies \textbf{no fair queuing}.]{\includegraphics[width=\columnwidth]{{"figures/no_fq"}.pdf}
+\label{fig:no_fq_overview}}\\
+\subfloat[\footnotesize Queuing delay in case there is \textbf{no fair queuing}.]{
 \includegraphics[width=\columnwidth]{{"../sample/plots/concept_fcfs"}.pdf}
+\label{fig:no_fq_detail}}
 \caption{In case there is \textbf{no fair queuing}, when the bottleneck link is congested, a queue builds up. Since both subflows share the same queue, they both see increased queuing delay.}
 \label{fig:illustration_no_fq}
 \end{figure}    
