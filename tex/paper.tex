@@ -36,7 +36,7 @@ Fair queuing is becoming increasingly prevalent in the internet and has been sho
 Performance could be improved even more if endpoints could detect the presence of fair queuing on a certain path and adjust their congestion control accordingly. 
 If fair queuing is detected, the congestion control would not have to take cross traffic into account, which allows for more flexibility. 
 In this paper, we develop the first algorithm that continuously checks if fair queuing is present on a path, with very high accuracy. 
-When fair queuing is detected, a different congestion control can be chosen, which can result in reduced latency. In case fair queuing is detected, each flow can specify how much queuing delay it allows, meaning that each flow can choose its own tradeoff between throughput and latency. 
+When fair queuing is detected, a different congestion control can be chosen, which can result in reduced latency. Also, each flow can then specify how much queuing delay it allows, meaning that it can choose its own tradeoff between throughput and latency. 
 \end{abstract}
 
 % \begin{IEEEkeywords}
@@ -82,7 +82,7 @@ If fair queuing is successfully detected at flow startup, a congestion control w
 While this delay-based congestion control achieved high throughput and low delay, similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}, 
 it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,ha_cubic_2008}.
 This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus it is only used if fair queuing is detected. 
-If the absence of fair queuing is detected, our previous approach uses a more aggressive congestion control (specifically PCC \cite{dong_pcc_2015}), which can compete better with other, more aggressive network flows,
+If the absence of fair queuing is detected, our previous approach uses a more aggressive congestion control (PCC \cite{dong_pcc_2015}), which can compete better with other, more aggressive network flows,
 but doesn't keep delay as low as our delay-based congestion control. 
 
 While our previous approach had high detection accuracy (98\%), it also had some limitations:
@@ -92,12 +92,12 @@ While our previous approach had high detection accuracy (98\%), it also had some
     \item It would detect fair queuing only after filling the queue at the bottleneck completely, \textbf{causing packet loss}. 
 \end{itemize}
 
-We would thus like to have an approach which 
+We would like to have an approach which 
 \begin{itemize}
     \item \textbf{continuously checks} for the presence or absence of fair queuing, not only at flow startup. 
     \item \textbf{doesn't cause packet loss} while trying to determine if there is fair queuing or not. 
     \item can be \textbf{transparently used} on top of any congestion control algorithm. 
-    \item lets each application \textbf{choose how much delay} it allows in case fair queuing is detected. Allowing a higher delay can result in higher throughput. 
+    \item lets each application \textbf{choose how much delay} it allows in case fair queuing is detected. Allowing a higher queuing delay can result in higher throughput. 
 \end{itemize} 
 
 \section{Concept}
@@ -111,7 +111,7 @@ When the total sending rate reaches the link capacity and fair queuing is presen
 \textbf{fair queuing} is going to \textbf{limit} the throughput of the \textbf{dominant subflow} (\autoref{fig:illustration_fq}). 
 Since its throughput is limited, a queue is going to build up and delay is going to increase. If the delay only increases for the dominant subflow but not for the non-dominant one, this means that there's fair queuing. 
 
-On the other side, if there is no fair queuing, when the sending rate exceeds the capacity of the bottleneck link, a queuing is going to build up and queuing delay is going to rise for \textbf{both} the dominant and the non-dominant subflow (\autoref{fig:illustration_no_fq}). 
+On the other side, if there is no fair queuing, when the sending rate exceeds the capacity of the bottleneck link, a queue is going to build up and queuing delay is going to rise for \textbf{both} the dominant and the non-dominant subflow (\autoref{fig:illustration_no_fq}). 
 In this case, Tonopah doesn't behave different from a network flow which doesn't have fair queuing detection. 
 This can be a potential advantage which a Tonopah-enabled congestion control can have over other congestion control algorithms such as BBR, which has been shown to be unfair to other flows sometimes \cite{ware_modeling_2019,hock_experimental_2017}.
 
@@ -130,7 +130,7 @@ After each round-trip time, Tonopah checks if the queuing delay of dominant subf
 
 Both subflows are controlled by the same congestion window. The differences in sending rates are achieved by using pacing. 
 The basis of the implementation of Tonopah is \textit{Picoquic}\footnote{\url{https://github.com/private-octopus/picoquic/tree/master/picoquic}}. 
-Picoquic includes support for Multipath QUIC and pacing, which we need for the implementation of Tonopah. Also, it implements congestion control algorithms. 
+Picoquic includes support for Multipath QUIC and pacing, which we need for the implementation of Tonopah. Also, Picoquic implements several congestion control algorithms. 
 We base Tonopah on the NewReno implementation of Picquic. When fair queuing is detected, the congestion window is reduced by $\frac{1}{8}$. 
 This worked well for our proof-of-concept implementation but one could also specify any other behavior in case fair queuing is detected or even do nothing at all. 
 
@@ -142,8 +142,8 @@ congestion control algorithms as well. By basing our implementation on Picoquic,
 We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.7\,GHz. 
 By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
-We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing and \textit{fq} for fair queuing. 
-For evaluation we choose a simple network in which the sender is connected to the receiver via a switch. 
+We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing and \textit{fq} \textit{fq\_codel} for fair queuing. 
+For the evaluation we choose a simple network in which the sender is connected to the receiver via a switch. 
 
 All the source code and evaluation code of this paper is freely available (refer to the very top of this paper). 
 
@@ -222,8 +222,8 @@ However, we want to emphasize that Tonopah is not a congestion control algorithm
 \label{fig:fq_crosstraffic}
 \end{figure}    
     
-To evaluate Tonopah's performance under crosstraffic, we use iperf with the NewReno congestion control. We start iperf 4\,s before Tonopah so that it has time to saturate the link. 
-\autoref{fig:no_fq_crosstraffic} and \autoref{fig:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged or even slightly better. We tried to use fq\_codel as in \autoref{fig:fq} but we encountered problems when using fq\_codel in combination with iperf3. Frequently, iperf3 would lose all packets, have a timeout after a couple of seconds and stop. Since we could not resolve this issue, we used fq instead of fq\_codel, for which this issue didn't occur. For fq, we set the buffer to the same size as for pfifo (1 bandwidth delay product but at least 100 packets). 
+To evaluate Tonopah's performance under crosstraffic, we use iperf3 with the NewReno congestion control. We start iperf 4\,s before Tonopah so that it has time to saturate the link. 
+\autoref{fig:no_fq_crosstraffic} and \autoref{fig:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged or even slightly better. We tried to use fq\_codel as in \autoref{fig:fq} but we encountered problems when using fq\_codel in combination with iperf3. Frequently, iperf3 would lose all packets, have a timeout after a couple of seconds and stop. Since we could not resolve this issue, we used fq instead of fq\_codel, for which this issue didn't occur. 
 
 \section{Discussion}
 
