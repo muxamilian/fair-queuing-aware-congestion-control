@@ -87,7 +87,7 @@ but doesn't keep delay as low as our delay-based congestion control.
 
 While our previous approach had high detection accuracy (98\%), it also had some limitations:
 \begin{itemize}
-    \item It would \textbf{only} detect fair queuing only at \textbf{flow startup}. 
+    \item It would \textbf{only} detect fair queuing at \textbf{flow startup}. 
     But if the bottleneck link changes during a flow, it could be that the previous bottleneck had fair queuing while the new one doesn't. This wouldn't have been detected. 
     \item It would detect fair queuing only after filling the queue at the bottleneck completely, \textbf{causing packet loss}. 
 \end{itemize}
@@ -142,7 +142,7 @@ congestion control algorithms as well. By basing our implementation on Picoquic,
 We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.7\,GHz. 
 By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
-We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing and \textit{fq} \textit{fq\_codel} for fair queuing. 
+We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing and \textit{fq} and \textit{fq\_codel} for fair queuing. 
 For the evaluation we choose a simple network in which the sender is connected to the receiver via a switch. 
 
 All the source code and evaluation code of this paper is freely available (refer to the very top of this paper). 
@@ -151,22 +151,11 @@ In the following evaluations we always run each network flow for 90\,s. Tonopah 
 If in the evaluation scenario there is fair queuing and Tonopah detects fair queuing correctly for 80\,s and fails to detect it for 10\,s, we 
 state the accuracy as $\frac{80}{90} = 89\%$. 
 We evaluate the performance of Tonopah over a range of delays from 10 to 100\,ms and link capacity from 10 to 100\,Mbit/s in a grid-like fashion. 
-For each combination of delay and link capacity, multiple experiment runs are performed and the median, the quartiles or the average of the results are shown. 
+For each combination of delay and link capacity, 10 experiment runs are performed and the empirical cumulative distribution functions and the average detection accuracy are shown. 
+
 As the buffer size at the bottleneck we set the bandwidth delay product but at least 100 packets when no fair queuing (pfifo) is used. When using fq for fair queuing, we set the buffer size for each flow using the same rule. When using fair queuing with fq\_codel, we use it in its default configuration. 
 
 \subsection{Detection accuracy}
-
-\begin{figure}[h]
-\centering
-\subfloat[\footnotesize pfifo]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_pfifo_new_tonopah"}.pdf}
-\label{fig:ecdf_pfifo}}
-\subfloat[\footnotesize fq\_codel]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_fq_codel_new_tonopah"}.pdf}
-\label{fig:ecdf_fq_codel}}
-\subfloat[\footnotesize fq]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_fq_new_tonopah"}.pdf}
-\label{fig:ecdf_fq}}
-\caption{Empirical cumulative distribution functions for detection of the abscence/presence of fair queuing.}
-\label{fig:ecdf}
-\end{figure}        
 
 \begin{figure}
 \centering
@@ -188,6 +177,18 @@ As the buffer size at the bottleneck we set the bandwidth delay product but at l
 \caption{Detection accuracy in case there is \textbf{fair queuing} (fq). The overall accuracy is 95.4\%.}
 \label{fig:fq}
 \end{figure}        
+
+\begin{figure}[h]
+\centering
+\subfloat[\footnotesize pfifo]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_pfifo_new_tonopah"}.pdf}
+\label{fig:ecdf_pfifo}}
+\subfloat[\footnotesize fq\_codel]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_fq_codel_new_tonopah"}.pdf}
+\label{fig:ecdf_fq_codel}}
+\subfloat[\footnotesize fq]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_fq_new_tonopah"}.pdf}
+\label{fig:ecdf_fq}}
+\caption{Empirical cumulative distribution functions for detection of the abscence/presence of fair queuing.}
+\label{fig:ecdf}
+\end{figure}            
 
 \autoref{fig:no_fq} shows that if there is no fair queuing, Tonopah detects this correctly virtually always. 
 If there is fair queuing with fq\_codel (\autoref{fig:fq_codel}) or fq (\autoref{fig:fq}), Tonopah detects this correctly very often but not in every case. \autoref{fig:ecdf} shows the empirical cumulative distribution functions. 
@@ -214,21 +215,11 @@ The experiment setup is the same as in \autoref{fig:fq}. }
 \end{table}    
 
 While the goal of this paper is to implement a mechanism to detect fair queuing in an online fashion, 
-we also want to show that fair queuing detection can be used to lower the queuing delay drastically while not impairing throughput. 
-\autoref{table:throughput_and_delay} shows that Tonopah can lower queuing delay by more than two thirds while keeping throughput unchanged, when it is implemented on top on NewReno. 
+we also show that fair queuing detection can be used to lower the queuing delay drastically while not impairing throughput. 
+\autoref{table:throughput_and_delay} shows that Tonopah can lower queuing delay by more than $\frac{9}{10}$ while only achieving slightly lower throughput, when it is implemented on top on NewReno. 
 However, we want to emphasize that Tonopah is not a congestion control algorithm but just a mechanism to measure fair queuing which can be used with any congestion control algorithm. 
 
 \subsection{Cross-traffic}
-
-\begin{figure}[h]
-\centering
-\subfloat[\footnotesize pfifo]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_pfifo_new_tonopah_iperf"}.pdf}
-\label{fig:ecdf_crosstraffic_pfifo}}
-\subfloat[\footnotesize fq]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_fq_new_tonopah_iperf"}.pdf}
-\label{fig:ecdf_crosstraffic_fq}}
-\caption{Empirical cumulative distribution functions for detection of the abscence/presence of fair queuing when there is cross-traffic.}
-\label{fig:ecdf_crosstraffic}
-\end{figure}            
 
 \begin{figure}
 \centering
@@ -243,16 +234,25 @@ However, we want to emphasize that Tonopah is not a congestion control algorithm
 \caption{Detection accuracy in case there is \textbf{fair queuing} (fq) under the presence of \textbf{cross-traffic}. The overall accuracy is 98.1\%.}
 \label{fig:fq_crosstraffic}
 \end{figure}    
+
+\begin{figure}[h]
+\centering
+\subfloat[\footnotesize pfifo]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_pfifo_new_tonopah_iperf"}.pdf}
+\label{fig:ecdf_crosstraffic_pfifo}}
+\subfloat[\footnotesize fq]{\includegraphics[width=0.33\columnwidth]{{"../sample/plots/results_fq_new_tonopah_iperf"}.pdf}
+\label{fig:ecdf_crosstraffic_fq}}
+\caption{Empirical cumulative distribution functions for detection of the abscence/presence of fair queuing when there is \textbf{cross-traffic}.}
+\label{fig:ecdf_crosstraffic}
+\end{figure}                
     
 To evaluate Tonopah's performance under cross-traffic, we use iperf3 with the NewReno congestion control. We start iperf 4\,s before Tonopah so that it has time to saturate the link. 
-\autoref{fig:no_fq_crosstraffic} and \autoref{fig:fq_crosstraffic} show that also in the presence of cross-traffic Tonpah's detection accuracy is virtually unchanged or even slightly better. We tried to use fq\_codel as in \autoref{fig:fq} but we encountered problems when using fq\_codel in combination with iperf3. Frequently, iperf3 would lose all packets, have a timeout after a couple of seconds and stop. Since we could not resolve this issue, we used fq instead of fq\_codel, for which this issue didn't occur. 
+\autoref{fig:no_fq_crosstraffic} and \autoref{fig:fq_crosstraffic} show that also in the presence of cross-traffic, Tonpah's detection accuracy is virtually unchanged or even slightly better. We tried to use fq\_codel as in \autoref{fig:fq} but we encountered problems when using fq\_codel in combination with iperf3. Frequently, iperf3 would lose all packets, have a timeout after a couple of seconds and stop. Since we could not resolve this issue, we used fq instead of fq\_codel, for which this issue didn't occur. 
 
 \autoref{fig:ecdf_crosstraffic} shows the empirical cumulative distribution functions when there is cross-traffic. 
 
 \section{Discussion}
 
-We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy. 
-We also showed that it can work with alternative versions of fair queuing such as fq\_codel although experiments showed that accuracy depends on the configuration of the queue manager, 
+We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy for both fq and fq\_codel, although experiments showed that accuracy depends on the configuration of the queue manager, 
 the link capacity, base delay etc. Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cake} \cite{hoiland-jorgensen_piece_2018}, \textit{PIE} \cite{pan_pie_2013}, \textit{cocoa} \cite{bachl_cocoa_2019} or \textit{LFQ} \cite{bachl_lfq_2020}. 
 
 Another potentially fruitful line of research would be to integrate Tonopah into other congestion control algorithms such as BBR. 
