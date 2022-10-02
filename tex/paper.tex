@@ -45,18 +45,18 @@ When fair queuing is detected, a different congestion control can be chosen, whi
 
 \begin{figure}[h]
 \centering 
-\subfloat[\footnotesize A host sending data to a receiver. There is a bottleneck link with a switch which applies \textbf{fair queuing}.]{\includegraphics[width=\columnwidth]{{"figures/fq"}.pdf}
+\subfloat[\footnotesize A host sending data to a receiver via two concurrent flows. The blue flow sends two times more data. There is a bottleneck link with a switch which applies \textbf{fair queuing}.]{\includegraphics[width=\columnwidth]{{"figures/fq"}.pdf}
 \label{fig:fq_overview}}\\
 \subfloat[\footnotesize Queuing delay in case of \textbf{fair queuing}.]{
 \includegraphics[width=\columnwidth]{{"../sample/plots/concept_fq"}.pdf}
 \label{fig:fq_detail}}
-\caption{In case there is \textbf{fair queuing}, when the bottleneck link is congested, subflow 1, which sends more, sees increasing queuing delay. Subflow 2 doesn't see increased queuing delay as it sends less than its fair share and thus its packets don't have to wait at the bottleneck link.}
+\caption{In case there is \textbf{fair queuing}, when the bottleneck link is congested, subflow 1, which sends more, sees increased queuing delay. Subflow 2 doesn't see increased queuing delay as it sends less than its fair share and thus its packets don't have to wait at the bottleneck link.}
 \label{fig:illustration_fq}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\subfloat[\footnotesize A host sending data to a receiver. There is a bottleneck link with a switch which applies \textbf{no fair queuing}.]{\includegraphics[width=\columnwidth]{{"figures/no_fq"}.pdf}
+\subfloat[\footnotesize A host sending data to a receiver via two concurrent flows. The blue flow sends two times more data. There is a bottleneck link with a switch which applies \textbf{no fair queuing}.]{\includegraphics[width=\columnwidth]{{"figures/no_fq"}.pdf}
 \label{fig:no_fq_overview}}\\
 \subfloat[\footnotesize Queuing delay in case there is \textbf{no fair queuing}.]{
 \includegraphics[width=\columnwidth]{{"../sample/plots/concept_fcfs"}.pdf}
@@ -72,23 +72,23 @@ This can result in unfairness and bad user experience. Several different approac
 Another one is to enforce fairness at switches and routers, called ``fair queuing'' or ``flow queuing'' \cite{nagle_packet_1985}. 
 
 While fair queuing was proposed decades ago, it only gained popularity in the last couple of years because of implementations in the Linux kernel \cite{dumazet_pkt_sched_2013,hoeiland-joergensen_flow_2018} and also in Apple's macOS. 
-Applications can benefit from increasing deployment of fair queuing: It makes sure that not the most aggressive one wins. 
+Applications can benefit from increased deployment of fair queuing: It makes sure that not the most aggressive one wins. 
 It would be even better if applications could know if the connection they're sending on is managed by fair queuing. 
 Then they could be sure that they can use their preferred congestion control mechanism, while not bothering or being bothered by other network flows. 
 We proposed the first such approach in previous work \cite{bachl_detecting_2021} but our previous approach had some shortcomings upon which we improve in this paper. 
 
 In our previous work we proposed a technique which determines the presence of fair queuing at flow startup, which works as follows: 
-If fair queuing is successfully detected at flow startup, a congestion control was used which aimed to keep queuing delay low (delay-based congestion control). 
-While this delay-based congestion control achieved high throughput and low delay, similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}, 
-it was vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,ha_cubic_2008}.
-This means that our delay-based congestion control performed well but only when it wouldn't have to compete with other flows. Thus it is only used if fair queuing is detected. 
+If fair queuing is successfully detected at flow startup, a congestion control is used which aims to keep queuing delay low (delay-based congestion control). 
+While this delay-based congestion control achieves high throughput and low delay, similar to the Vegas congestion control algorithm \cite{brakmo_tcp_1995}, 
+it is vulnerable to be outcompeted by other network flows sending more aggressively, such as \cite{cardwell_bbr_2016,dong_pcc_2015,ha_cubic_2008}.
+This means that our delay-based congestion control performs well but only when it doesn't have to compete with other flows. Thus it is only used if fair queuing is detected. 
 If the absence of fair queuing is detected, our previous approach uses a more aggressive congestion control (PCC \cite{dong_pcc_2015}), which can compete better with other, more aggressive network flows,
 but doesn't keep delay as low as our delay-based congestion control. 
 
 While our previous approach had high detection accuracy (98\%), it also had some limitations:
 \begin{itemize}
     \item It would \textbf{only} detect fair queuing at \textbf{flow startup}. 
-    But if the bottleneck link changes during a flow, it could be that the previous bottleneck had fair queuing while the new one doesn't. This wouldn't have been detected. 
+    But if the bottleneck link changes during a flow, it could be the case that the previous bottleneck had fair queuing while the new one doesn't. This wouldn't have been detected. 
     \item It would detect fair queuing only after filling the queue at the bottleneck completely, \textbf{causing packet loss}. 
 \end{itemize}
 
@@ -142,7 +142,7 @@ congestion control algorithms as well. By basing our implementation on Picoquic,
 We evaluated Tonopah on an Apple MacBook Air from 2011 with an Intel Core i5-2557M CPU at 1.7\,GHz. 
 By choosing old hardware for experimentation, we can show that our algorithm doesn't use excessive compute and can also run well on weak hardware. 
 
-We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing and \textit{fq} and \textit{fq\_codel} for fair queuing. 
+We emulate the network using \textit{mininet} and use Linux's \textit{pfifo} queuing discipline in the case there is no fair queuing and \textit{fq\_codel} and \textit{fq} for fair queuing. 
 For the evaluation we choose a simple network in which the sender is connected to the receiver via a switch. 
 
 All the source code and evaluation code of this paper is freely available (refer to the very top of this paper). 
@@ -252,8 +252,10 @@ To evaluate Tonopah's performance under cross-traffic, we use iperf3 with the Ne
 
 \section{Discussion}
 
-We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy for both fq and fq\_codel, although experiments showed that accuracy depends on the configuration of the queue manager, 
+We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy for both fq\_codel and fq, although experiments showed that accuracy depends on the configuration of the queue manager, 
 the link capacity, base delay etc. Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cake} \cite{hoiland-jorgensen_piece_2018}, \textit{PIE} \cite{pan_pie_2013}, \textit{cocoa} \cite{bachl_cocoa_2019} or \textit{LFQ} \cite{bachl_lfq_2020}. 
+
+If one were to deploy Tonopah on the internet, one could need to implement an API, through which applications can choose how much delay they allow, in case fair queuing is detected. 
 
 Another potentially fruitful line of research would be to integrate Tonopah into other congestion control algorithms such as BBR. 
 
