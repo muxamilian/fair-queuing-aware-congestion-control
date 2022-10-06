@@ -2,7 +2,7 @@
 
 This repo contains the code for *Fair Queuing Aware Congestion Control*, a [research work](https://arxiv.org/abs/2206.10561). 
 
-It is a congestion control algorithm that always uses two subflows with the same source and destination IP address. It alternatingly sends more data on one of the two subflows and then checks whether the subflow that sent more could achieve a higher throughput. If this is the case, then there's no fair queuing, otherwise, if both subflows achieve the same throughput, even though one sends more, it means that there is fair queuing. 
+It is a congestion control algorithm that always uses two subflows with the same source and destination IP address. One subflow always sends more data than the other one. If there is fair queuing, the subflow that sends more sees higher queuing delay than the one that sends less, in case there is congestion at the bottleneck. 
 
 The idea is that one uses regular congestion control when no fair queuing is detected. If there's fair queuing, one is free to use any congestion control algorithm as it cannot interact badly with other flows as fairness is always guaranteed. 
 
@@ -14,13 +14,13 @@ To run the code, install `picquic` as described below.
 
 Also install `mininet` from mininet's website. 
 
-Then, run an experiment with our congestion control (Tonopah) with fair queuing like this (to reproduce Table II): 
+Then, run an experiment with our congestion control (Tonopah) with fair queuing like this (to reproduce Figure 4): 
 
-    sudo python3 sample/network_sim.py --qdisc fq --cc tonopah
+    sudo python3 sample/network_sim.py --qdisc fq_codel --cc new_tonopah
     
-To run without fair queuing (reproducing Table I), run it like this:
+To run without fair queuing (reproducing Figure 3), run it like this:
 
-    sudo python3 sample/network_sim.py --qdisc pfifo --cc tonopah
+    sudo python3 sample/network_sim.py --qdisc pfifo --cc new_tonopah
     
 You can also specify `fq_codel` as an alternative version of fair queuing. 
     
