@@ -2194,6 +2194,7 @@ int picoquic_incoming_segment(
 
     /* Find the path and if required log the incoming packet */
     if (cnx != NULL) {
+        addr_from = &(cnx->path[0]->peer_addr);
         if (ret == 0 && ph.ptype == picoquic_packet_1rtt_protected) {
             if (ph.payload_length == 0) {
                 /* empty payload! */
