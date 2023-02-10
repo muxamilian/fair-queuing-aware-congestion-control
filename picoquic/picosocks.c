@@ -605,7 +605,7 @@ void picoquic_socks_cmsg_format(
                 &control_length, IPPROTO_IP, IP_PKTINFO, sizeof(struct in_pktinfo));
             if (pktinfo != NULL) {
                 pktinfo->ipi_addr.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
-                // pktinfo->ipi_spec_dst.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
+                pktinfo->ipi_spec_dst.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
                 pktinfo->ipi_ifindex = (unsigned long)dest_if;
             }
             else {
