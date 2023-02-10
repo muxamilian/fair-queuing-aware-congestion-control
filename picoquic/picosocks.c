@@ -1087,6 +1087,9 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     msg.msg_control = (void*)cmsg_buffer;
     msg.msg_controllen = sizeof(cmsg_buffer);
 
+    printf("Sending IP address is %s", inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
+    printf(", dst is %s\n", inet_ntoa((((struct sockaddr_in*)addr_dest)->sin_addr)));
+
     /* Format the control message */
     picoquic_socks_cmsg_format(&msg, length, send_msg_size, addr_from, dest_if);
 
