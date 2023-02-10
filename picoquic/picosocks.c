@@ -605,6 +605,7 @@ void picoquic_socks_cmsg_format(
                 &control_length, IPPROTO_IP, IP_PKTINFO, sizeof(struct in_pktinfo));
             if (pktinfo != NULL) {
                 pktinfo->ipi_addr.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
+                pktinfo->ipi_spec_dst.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
                 pktinfo->ipi_ifindex = (unsigned long)dest_if;
             }
             else {
@@ -1094,7 +1095,7 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     msg.msg_control = (void*)cmsg_buffer;
     msg.msg_controllen = sizeof(cmsg_buffer);
 
-    printf("send: Sending IP address is %s", inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
+    printf("send: if is %d Sending IP is %s", dest_if, inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
     printf(", dst is %s\n", inet_ntoa((((struct sockaddr_in*)addr_dest)->sin_addr)));
 
     /* Format the control message */
@@ -1114,7 +1115,6 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     // pktinfo->ipi_ifindex = (unsigned long)dest_if;
 
     bytes_sent = sendmsg(fd, &msg, 0);
-
 
     if (bytes_sent <= 0) {
         int last_error = errno;
