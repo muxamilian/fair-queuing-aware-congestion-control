@@ -1104,8 +1104,10 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     cmsg->cmsg_type = IP_PKTINFO;
     cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
     pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
-    pktinfo->ipi_ifindex = dest_if;
-    pktinfo->ipi_spec_dst = ((struct sockaddr_in*) addr_from)->sin_addr; 
+    // pktinfo->ipi_ifindex = dest_if;
+    // pktinfo->ipi_spec_dst = ((struct sockaddr_in*) addr_from)->sin_addr; 
+    pktinfo->ipi_addr.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
+    pktinfo->ipi_ifindex = (unsigned long)dest_if;
 
     bytes_sent = sendmsg(fd, &msg, 0);
 
