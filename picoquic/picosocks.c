@@ -994,6 +994,10 @@ int picoquic_recvmsg(SOCKET_TYPE fd,
         picoquic_socks_cmsg_parse(&msg, addr_dest, dest_if, received_ecn, NULL);
     }
 
+    printf("recv: Sending IP address is %s", inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
+    printf(", dst is %s\n", inet_ntoa((((struct sockaddr_in*)addr_dest)->sin_addr)));
+
+
     return bytes_recv;
 }
 #endif
@@ -1090,7 +1094,7 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     msg.msg_control = (void*)cmsg_buffer;
     msg.msg_controllen = sizeof(cmsg_buffer);
 
-    printf("Sending IP address is %s", inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
+    printf("send: Sending IP address is %s", inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
     printf(", dst is %s\n", inet_ntoa((((struct sockaddr_in*)addr_dest)->sin_addr)));
 
     /* Format the control message */
