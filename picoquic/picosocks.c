@@ -1093,21 +1093,21 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     printf("Sending IP address is %s", inet_ntoa((((struct sockaddr_in*)addr_from)->sin_addr)));
     printf(", dst is %s\n", inet_ntoa((((struct sockaddr_in*)addr_dest)->sin_addr)));
 
-    // /* Format the control message */
-    // picoquic_socks_cmsg_format(&msg, length, send_msg_size, addr_from, dest_if);
+    /* Format the control message */
+    picoquic_socks_cmsg_format(&msg, length, send_msg_size, addr_from, dest_if);
     
-    struct cmsghdr *cmsg;
-    struct in_pktinfo *pktinfo;
-    // after initializing msghdr & control data to CMSG_SPACE(sizeof(struct in_pktinfo))
-    cmsg = CMSG_FIRSTHDR(&msg);
-    cmsg->cmsg_level = IPPROTO_IP;
-    cmsg->cmsg_type = IP_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-    pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
-    // pktinfo->ipi_ifindex = dest_if;
-    // pktinfo->ipi_spec_dst = ((struct sockaddr_in*) addr_from)->sin_addr; 
-    pktinfo->ipi_addr.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
-    pktinfo->ipi_ifindex = (unsigned long)dest_if;
+    // struct cmsghdr *cmsg;
+    // struct in_pktinfo *pktinfo;
+    // // after initializing msghdr & control data to CMSG_SPACE(sizeof(struct in_pktinfo))
+    // cmsg = CMSG_FIRSTHDR(&msg);
+    // cmsg->cmsg_level = IPPROTO_IP;
+    // cmsg->cmsg_type = IP_PKTINFO;
+    // cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+    // pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
+    // // pktinfo->ipi_ifindex = dest_if;
+    // // pktinfo->ipi_spec_dst = ((struct sockaddr_in*) addr_from)->sin_addr; 
+    // pktinfo->ipi_addr.s_addr = ((struct sockaddr_in*)addr_from)->sin_addr.s_addr;
+    // pktinfo->ipi_ifindex = (unsigned long)dest_if;
 
     bytes_sent = sendmsg(fd, &msg, 0);
 
