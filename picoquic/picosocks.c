@@ -1098,6 +1098,7 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     printf(", dst is %s\n", inet_ntoa((((struct sockaddr_in*)addr_dest)->sin_addr)));
 
     /* Format the control message */
+    abort();
     picoquic_socks_cmsg_format(&msg, length, send_msg_size, addr_from, dest_if);
     
     // struct cmsghdr *cmsg;
