@@ -198,7 +198,13 @@ void picoquic_tonopah_sim_notify(
         default: {
             uint64_t complete_delta = nb_bytes_acknowledged * path_x->send_mtu + nr_state->residual_ack;
             nr_state->residual_ack = complete_delta % nr_state->cwin;
-            uint64_t current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
+
+            uint64_t current_smoothed_rtt;
+            if (cnx->nb_paths > 1) {
+                current_smoothed_rtt = (cnx->path[0]->smoothed_rtt + cnx->path[1]->smoothed_rtt)/2;
+            } else {
+                current_smoothed_rtt = cnx->path[0]->smoothed_rtt;
+            }
             double ratio = MIN((((double) current_smoothed_rtt) / ((double) minimum_interval)), 1.0);
             // printf("ratio: %f\n", ratio);
             nr_state->cwin += ratio * (((double) complete_delta) / ((double) nr_state->cwin));

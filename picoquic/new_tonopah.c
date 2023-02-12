@@ -651,9 +651,13 @@ static void picoquic_new_tonopah_delete(picoquic_path_t* path_x)
     if (new_tonopah_last_cnx != NULL) {
         in_port_t s_port = ((struct sockaddr_in*) &(new_tonopah_last_cnx->path[0]->local_addr))->sin_port;
         printf("Tonopah: Ending at %lu\n", picoquic_current_time());
-        printf("src_port: %hu, selected1: %d; congested1: %d, paced1: %d, selected2: %d, congested2: %d, paced2: %d\n", s_port, 
-            new_tonopah_last_cnx->path[0]->selected, new_tonopah_last_cnx->path[0]->congested, new_tonopah_last_cnx->path[0]->paced, 
-            new_tonopah_last_cnx->path[1]->selected, new_tonopah_last_cnx->path[1]->congested, new_tonopah_last_cnx->path[1]->paced);
+        if (new_tonopah_last_cnx->nb_paths > 1) {
+            printf("src_port: %hu, selected1: %d; congested1: %d, paced1: %d, selected2: %d, congested2: %d, paced2: %d\n", s_port, 
+                new_tonopah_last_cnx->path[0]->selected, new_tonopah_last_cnx->path[0]->congested, new_tonopah_last_cnx->path[0]->paced, 
+                new_tonopah_last_cnx->path[1]->selected, new_tonopah_last_cnx->path[1]->congested, new_tonopah_last_cnx->path[1]->paced);
+        } else {
+            puts("Ending but couldn't output debug metrics as other flow already is gone.");
+        }
     }
     if (path_x->congestion_alg_state != NULL) {
         free(path_x->congestion_alg_state);
