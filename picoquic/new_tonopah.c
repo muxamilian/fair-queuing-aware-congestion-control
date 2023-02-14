@@ -645,6 +645,8 @@ static void picoquic_new_tonopah_notify(
     }
 }
 
+uint8_t deleted_paths = 0;
+
 /* Release the state of the congestion control algorithm */
 static void picoquic_new_tonopah_delete(picoquic_path_t* path_x)
 {
@@ -656,12 +658,17 @@ static void picoquic_new_tonopah_delete(picoquic_path_t* path_x)
                 new_tonopah_last_cnx->path[0]->selected, new_tonopah_last_cnx->path[0]->congested, new_tonopah_last_cnx->path[0]->paced, 
                 new_tonopah_last_cnx->path[1]->selected, new_tonopah_last_cnx->path[1]->congested, new_tonopah_last_cnx->path[1]->paced);
         } else {
-            puts("Ending but couldn't output debug metrics as other flow already is gone.");
+            // puts("Ending but couldn't output debug metrics as other flow already is gone.");
         }
     }
     if (path_x->congestion_alg_state != NULL) {
         free(path_x->congestion_alg_state);
         path_x->congestion_alg_state = NULL;
+        deleted_paths += 1;
+    }
+    if (deleted_paths >= 2) {
+        puts("Tonopah doesn't support several consecutive connections at the moment, exiting");
+        exit(0);
     }
 }
 
