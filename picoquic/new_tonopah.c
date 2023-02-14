@@ -650,8 +650,9 @@ uint8_t deleted_paths = 0;
 /* Release the state of the congestion control algorithm */
 static void picoquic_new_tonopah_delete(picoquic_path_t* path_x)
 {
+    in_port_t s_port = 0;
     if (new_tonopah_last_cnx != NULL) {
-        in_port_t s_port = ((struct sockaddr_in*) &(new_tonopah_last_cnx->path[0]->local_addr))->sin_port;
+        s_port = ((struct sockaddr_in*) &(new_tonopah_last_cnx->path[0]->local_addr))->sin_port;
         printf("Tonopah: Ending at %lu\n", picoquic_current_time());
         if (new_tonopah_last_cnx->nb_paths > 1) {
             printf("src_port: %hu, selected1: %d; congested1: %d, paced1: %d, selected2: %d, congested2: %d, paced2: %d\n", s_port, 
@@ -666,8 +667,8 @@ static void picoquic_new_tonopah_delete(picoquic_path_t* path_x)
         path_x->congestion_alg_state = NULL;
         deleted_paths += 1;
     }
-    if (deleted_paths >= 2) {
-        puts("Tonopah doesn't support several consecutive connections at the moment, exiting");
+    if (deleted_paths >= 2 && s_port == 4433) {
+        puts("The tonopah server (this is a server, right?) doesn't support several consecutive connections at the moment, exiting");
         exit(0);
     }
 }
