@@ -667,7 +667,7 @@ static void picoquic_new_tonopah_delete(picoquic_path_t* path_x)
         path_x->congestion_alg_state = NULL;
         deleted_paths += 1;
     }
-    if (deleted_paths >= 2 && s_port == 4433) {
+    if (deleted_paths >= 2 && (s_port == 4433 || s_port == 4434)) {
         puts("The tonopah server (this is a server, right?) doesn't support several consecutive connections at the moment, exiting");
         exit(0);
     }

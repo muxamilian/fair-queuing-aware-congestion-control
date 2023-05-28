@@ -136,7 +136,7 @@ for delay in (10, 50, 100):
 
                 strings = (
                     f"tc qdisc del dev {opt.interface} root", 
-                    f"tc qdisc add dev {opt.interface} root handle 1: netem{f' delay {int(opt.delay/2) if with_delay else 0}ms'}", 
+                    f"tc qdisc add dev {opt.interface} root handle 1: netem{f' delay {int(opt.delay/2) if with_delay else 0}ms'} limit 1000000", 
                     f"tc qdisc add dev {opt.interface} parent 1: handle 2: htb default 21", 
                     f"tc class add dev {opt.interface} parent 2: classid 2:21 htb rate {opt.rate if with_delay else 1000}mbit", 
                     f"tc qdisc add dev {opt.interface} parent 2:21 handle 3: {qdisc_string}"
