@@ -251,10 +251,12 @@ However, we want to emphasize that Tonopah is not a congestion control algorithm
 
 \section{Discussion}
 
-We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy for both fq\_codel and fq, although experiments showed that accuracy depends on the configuration of the queue manager, 
-the link capacity, base delay etc. Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cake} \cite{hoiland-jorgensen_piece_2018}, \textit{PIE} \cite{pan_pie_2013}, \textit{cocoa} \cite{bachl_cocoa_2019} or \textit{LFQ} \cite{bachl_lfq_2020}. 
+We showed that continuous fair queuing detection is feasible and can achieve a high detection accuracy for both fq\_codel and fq, although experiments showed that accuracy depends on the configuration of the queue manager, the link capacity, base delay etc. 
+Further experiments could be done to finetune Tonopah and also experiment with other queue managers such as \textit{cake} \cite{hoiland-jorgensen_piece_2018}, \textit{PIE} \cite{pan_pie_2013}, \textit{cocoa} \cite{bachl_cocoa_2019} or \textit{LFQ} \cite{bachl_lfq_2020}. 
 
 If one were to deploy Tonopah on the internet, one could implement an API, through which applications can choose how much delay they allow, in case fair queuing is detected. 
+
+Since the subflow with the lower sending rate might experience lower queuing delay in case of fair queuing, it might be beneficial to include more important in this subflow while the less urgent data can be sent in the subflow with the higher sending rate. This might, for example, be useful for cloud gaming: One could separate the video data into two parts: One part which includes a low resolution base video, which is transferred with in the subflow with low queuing delay, while additional data, which increases the video quality, can be transferred in the subflow that might experience higher queuing delay. 
 
 Another potentially fruitful line of research would be to integrate Tonopah into other congestion control algorithms such as BBR. 
 
