@@ -256,7 +256,7 @@ Further experiments could be done to finetune Tonopah and also experiment with o
 
 If one were to deploy Tonopah on the internet, one could implement an API, through which applications can choose how much delay they allow, in case fair queuing is detected. 
 
-Since the subflow with the lower sending rate might experience lower queuing delay in case of fair queuing, it might be beneficial to include more important in this subflow while the less urgent data can be sent in the subflow with the higher sending rate. This might, for example, be useful for cloud gaming: One could separate the video data into two parts: One part which includes a low resolution base video, which is transferred with in the subflow with low queuing delay, while additional data, which increases the video quality, can be transferred in the subflow that might experience higher queuing delay. 
+Since the subflow with the lower sending rate might experience lower queuing delay in case of fair queuing, it might be beneficial to include more important data in this subflow while the less urgent data can be sent in the subflow with the higher sending rate. This might, for example, be useful for cloud gaming: One could separate the video data into two parts: One part which includes a low resolution base video, which is transferred in the subflow with low queuing delay, while additional data, which increase the video quality, can be transferred in the subflow that might experience higher queuing delay. 
 
 Another potentially fruitful line of research would be to integrate Tonopah into other congestion control algorithms such as BBR. 
 
