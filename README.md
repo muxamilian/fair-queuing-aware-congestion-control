@@ -2,7 +2,7 @@
 
 This repo contains the code for *Fair Queuing Aware Congestion Control*, a [research work](https://arxiv.org/abs/2206.10561). 
 
-It is a congestion control algorithm that always uses two subflows with the same source and destination IP address. One subflow always sends more data than the other one. If there is fair queuing, the subflow that sends more sees higher queuing delay than the one that sends less, in case there is congestion at the bottleneck. 
+It is a congestion control algorithm that always uses two subflows with the same source and destination IP address. One subflow always sends more data than the other one. If there is fair queuing, it can be detected when the subflow that sends more sees higher queuing delay than the subflow that sends less, in case there is congestion at the bottleneck. 
 
 The idea is that one uses regular congestion control when no fair queuing is detected. If there's fair queuing, one is free to use any congestion control algorithm as it cannot interact badly with other flows as fairness is always guaranteed. 
 
